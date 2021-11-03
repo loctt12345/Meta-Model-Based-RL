@@ -1,0 +1,3 @@
+from envs.half_cheetah_env import HalfCheetahEnv
+from envs.half_cheetah_blocks_env import HalfCheetahBlocksEnv
+from envs.half_cheetah_hfield_env import HalfCheetahHFieldEnv
