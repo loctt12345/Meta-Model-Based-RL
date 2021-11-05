@@ -1,6 +1,8 @@
 import sys
+import os
 try:
-    sys.path.append("C:\\Users\\84915\\Desktop\\RL-Projects\\model\\varibad_for_game")
+    sys.path.append(os.path.abspath("."))
+    # sys.path.append("C:\\Users\\84915\\Desktop\\RL-Projects\\model\\varibad_for_game")
 except:
     pass
 import numpy as np
@@ -38,13 +40,13 @@ def main():
     print(logger_kwargs)
     env = CFG.env(task = CFG.task)
     # print(env.task)
-    
+
     encoder = lstm_encoder(CFG)
     decoder = Decoder(CFG)
     policy = PPO(lambda : CFG.env(task = CFG.task), CFG, actor_critic=core.MLPActorCritic,
         ac_kwargs=dict(hidden_sizes=[CFG.hid]*CFG.l),logger_kwargs=logger_kwargs,use_latent=CFG.use_latent,
         setup_writer = False)
-    
+
     model = metaRL(CFG, env = env, policy = policy, encoder = encoder,
         decoder = decoder, logger_kwargs = logger_kwargs,use_latent = CFG.use_latent)
 
@@ -63,7 +65,7 @@ def main():
             load_model(model, CFG)
         else:
             print('test random policy')
-        
+
         model.test()
 
 
@@ -89,12 +91,12 @@ if __name__ == '__main__':
     #     next_o, r, d, _ = env.step(a)
     #     save.append((o,a,next_o,r))
     #     o = [next_o]
-    
+
     # hidden = (torch.zeros([1, 1, CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([1, 1, CFG.lstm_hidden_dim], dtype=torch.float))
     # for i in range(CFG.construct_step):
     #     (o,a,next_o,r) = save[i]
     #     (mu,logvar,latent,hidden) = encoder(tensor(o),tensor(a),tensor([[r]]),hidden)
-    
+
     # for i in range(CFG.construct_step + CFG.inference_step-1):
     #     (o,a,next_o,r) = save[i]
     #     # print(tensor(o).shape,tensor(a).shape,tensor([next_o]).shape,tensor([[r]]).shape)
@@ -102,5 +104,5 @@ if __name__ == '__main__':
     #     (_,_,o_expect,_) = decoder.state_net(tensor(o),tensor(a),latent)
     #     print(i+1,r_expect.shape,o_expect.shape)
 
-        
+
     # return

@@ -1,0 +1,11 @@
+torch
+torchvision
+scipy
+tensorflow==2.6.0
+gym
+joblib
+mpi4py
+psutil
+tqdm
+tensorboardX
+pyopengl
