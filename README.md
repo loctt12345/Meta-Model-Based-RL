@@ -3,6 +3,7 @@
 ## Mac Setup
 1. Install the dependencies  
 ```
+cd Algorithm
 pip install -r requirements.txt  
 ```
 2. Download mujoco 131 at https://www.roboti.us/download.html and put it in ~/.mujoco/mjpro131
