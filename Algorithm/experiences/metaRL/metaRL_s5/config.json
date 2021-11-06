@@ -1,6 +1,6 @@
 {
     "CFG":	{
-        "<config.main_cfg.main_CFG object at 0x7f832b169a00>":	{
+        "<config.main_cfg.main_CFG object at 0x7fe319e61a00>":	{
             "VAE_update_epoch":	100,
             "action_embed_dim":	10,
             "batch_size":	64,
@@ -39,7 +39,7 @@
             "target_kl":	0.01,
             "task":	"None",
             "test_tasks":	[
-                "steep"
+                "basin"
             ],
             "train_pi_iters":	80,
             "train_tasks":	[
@@ -63,16 +63,16 @@
         ]
     },
     "actor_critic":	"MLPActorCritic",
-    "env_fn":	"<function main.<locals>.<lambda> at 0x7f831afde9d0>",
+    "env_fn":	"<function main.<locals>.<lambda> at 0x7fe328d829d0>",
     "exp_name":	"metaRL",
     "logger_kwargs":	{
         "exp_name":	"metaRL",
         "output_dir":	"./experiences/metaRL/metaRL_s5"
     },
     "self":	{
-        "<model.policy.PPO_spinup.PPO object at 0x7f831af6f9a0>":	{
+        "<model.policy.PPO_spinup.PPO object at 0x7fe328d1c9a0>":	{
             "logger":	{
-                "<spinup.utils.logx.EpochLogger object at 0x7f831af6f970>":	{
+                "<spinup.utils.logx.EpochLogger object at 0x7fe328d1c970>":	{
                     "epoch_dict":	{},
                     "exp_name":	"metaRL",
                     "first_row":	true,

@@ -24,8 +24,8 @@ class main_CFG :
         self.reward_scale = 1e-1
         self.use_latent = True
         self.train_tasks = ['hfield', 'hill', 'gentle']
-        self.test_tasks = ['steep']
-        # self.test_tasks = ['basin']
+        # self.test_tasks = ['steep']
+        self.test_tasks = ['basin']
         # self.test_tasks = ['basin','steep']
 
 
@@ -40,7 +40,7 @@ class main_CFG :
         self.encoder_activation = F.relu
         self.use_action = True
         self.use_reward = True
-        self.lr_VAE = 1e-4#1e-4
+        self.lr_VAE = 1e-3#1e-4
 
         # decoder config
 
@@ -60,7 +60,7 @@ class main_CFG :
         self.epochs = 20
         self.clip_ratio = 0.2
         self.pi_lr = 1e-4#3e-4
-        self.vf_lr = 1e-4#1e-3
+        self.vf_lr = 1e-3#1e-3
         self.train_pi_iters = 80
         self.train_v_iters = 80
         self.lam = 0.97
