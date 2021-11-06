@@ -36,7 +36,8 @@ def main():
     mpi_fork(CFG.cpu)  # run parallel code with mpi
 
     from spinup.utils.run_utils import setup_logger_kwargs
-    logger_kwargs = setup_logger_kwargs(CFG.exp_name, CFG.seed,'.\\experiences')
+    # logger_kwargs = setup_logger_kwargs(CFG.exp_name, CFG.seed,'.\\experiences')
+    logger_kwargs = setup_logger_kwargs(CFG.exp_name, CFG.seed,'./experiences')
     print(logger_kwargs)
     env = CFG.env(task = CFG.task)
     # print(env.task)

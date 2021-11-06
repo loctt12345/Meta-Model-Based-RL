@@ -12,25 +12,27 @@ class main_CFG :
         self.task = 'None'
         # training settings
         self.mode = 'test' # 'train' or 'test'
-        self.seed = 6
+        self.seed = 5
         self.cpu = 1
         self.exp_name = 'metaRL'     # name for save state dict
-        self.use_pretrained = False
-        self.trained_folder = '.\\experiences\\metaRL\\metaRL_s5\\pyt_save'
+        self.use_pretrained = True
+        # self.trained_folder = '.\\experiences\\metaRL\\metaRL_s5\\pyt_save'
+        self.trained_folder = './experiences/metaRL/metaRL_s5/pyt_save'
         self.render = True
-        self.batch_size = 256         # batch size for train
-        self.VAE_update_epoch = 40
+        self.batch_size = 64         # batch size for train
+        self.VAE_update_epoch = 100
         self.reward_scale = 1e-1
         self.use_latent = True
         self.train_tasks = ['hfield', 'hill', 'gentle']
-        # self.test_tasks = ['gentle']
-        self.test_tasks = ['basin','steep']
+        self.test_tasks = ['steep']
+        # self.test_tasks = ['basin']
+        # self.test_tasks = ['basin','steep']
 
 
         # Encoder config
 
         self.lstm_hidden_dim = 64   # hidden dim of lstm
-        self.latent_dim = 32        # latent dim after encoder 
+        self.latent_dim = 32        # latent dim after encoder
         self.lstm_layers = 3        # number layer of lstm 3
         self.obs_embed_dim = 10
         self.action_embed_dim = 10
@@ -38,12 +40,12 @@ class main_CFG :
         self.encoder_activation = F.relu
         self.use_action = True
         self.use_reward = True
-        self.lr_VAE = 1e-5#1e-4
+        self.lr_VAE = 1e-4#1e-4
 
         # decoder config
 
-        self.construct_step = 40 # use to construct latent
-        self.inference_step = 80 # use latent to predict next steps
+        self.construct_step = 80 # use to construct latent
+        self.inference_step = 10 # use latent to predict next steps
         self.decoder_hidden = [64,64]
         self.decoder_activation = nn.ReLU
 
@@ -54,11 +56,11 @@ class main_CFG :
 
         # PPO config
         self.gamma = 0.99
-        self.steps_per_epoch = 20000
-        self.epochs = 1000
+        self.steps_per_epoch = 10000
+        self.epochs = 20
         self.clip_ratio = 0.2
-        self.pi_lr = 1e-5#3e-4
-        self.vf_lr = 1e-5#1e-3
+        self.pi_lr = 1e-4#3e-4
+        self.vf_lr = 1e-4#1e-3
         self.train_pi_iters = 80
         self.train_v_iters = 80
         self.lam = 0.97
