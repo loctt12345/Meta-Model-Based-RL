@@ -48,73 +48,29 @@ def mlp(sizes, activation , output_activation=nn.Identity):
         layers += [nn.Linear(sizes[j], sizes[j+1]), act()]
     return nn.Sequential(*layers)
 
-class reward_network(nn.Module):
-    def __init__(self,CFG,obs_size,action_size):
-        super(reward_network, self).__init__()
-        self.CFG = CFG
-        self.fc_s = FeatureExtractor(obs_size,self.CFG.obs_embed_dim, F.relu,self.CFG.device)
-        self.fc_s_next = FeatureExtractor(obs_size,self.CFG.obs_embed_dim, F.relu,self.CFG.device)
-        self.fc_a = FeatureExtractor(action_size,self.CFG.action_embed_dim, F.relu,self.CFG.device)
-        self.input_dim = self.CFG.obs_embed_dim * 2 +  self.CFG.action_embed_dim + \
-            self.CFG.latent_dim
-        self.mlp = mlp([self.input_dim] + self.CFG.decoder_hidden,self.CFG.decoder_activation)
-
-        input_dim = self.CFG.decoder_hidden[-1]
-        self.fc_mu = nn.Linear(input_dim, 1)
-        self.fc_logvar = nn.Linear(input_dim, 1)
-
-    def gaussian_sample(self, mu, logvar):
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-        return eps.mul(std).add_(mu)
-
-    def forward(self, s, a, s_next, latent):
-        s = self.fc_s(s)
-        a = self.fc_a(a)
-        s_next = self.fc_s_next(s_next)
-        x = torch.cat((s,a,s_next,latent),dim = 1)
-        x = self.mlp(x)
-        mu = self.fc_mu(x)
-        logvar = self.fc_logvar(x)
-        return(mu,logvar,self.gaussian_sample(mu,logvar),torch.exp(0.5 * logvar))
-
-class state_network(nn.Module):
-    def __init__(self,CFG,obs_size,action_size):
-        super(state_network, self).__init__()
-        self.CFG = CFG
-        self.fc_s = FeatureExtractor(obs_size,self.CFG.obs_embed_dim, F.relu,self.CFG.device)
-        self.fc_a = FeatureExtractor(action_size,self.CFG.action_embed_dim, F.relu,self.CFG.device)
-        self.input_dim = self.CFG.obs_embed_dim +  self.CFG.action_embed_dim + \
-            self.CFG.latent_dim
-        self.mlp = mlp([self.input_dim] + self.CFG.decoder_hidden,self.CFG.decoder_activation)
-
-        input_dim = self.CFG.decoder_hidden[-1]
-        self.fc_mu = nn.Linear(input_dim, obs_size)
-        self.fc_logvar = nn.Linear(input_dim, obs_size)
-
-    def gaussian_sample(self, mu, logvar):
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-        return eps.mul(std).add_(mu)
-
-    def forward(self, s, a, latent):
-        s = self.fc_s(s)
-        a = self.fc_a(a)
-        x = torch.cat((s,a,latent),dim = 1)
-        x = self.mlp(x)
-        mu = self.fc_mu(x)
-        logvar = self.fc_logvar(x)
-        return(mu,logvar,self.gaussian_sample(mu,logvar),torch.exp(0.5 * logvar))
-
-
-class Decoder():
+class Decoder(nn.Module):
     def __init__(self,CFG):
+        super(Decoder, self).__init__()
         self.CFG = CFG
         env = self.CFG.env(task = CFG.task)
         obs_size = env.observation_space.shape[0]
         action_size = env.action_space.shape[0]
-        self.reward_net = reward_network(CFG,obs_size,action_size)
-        self.state_net = state_network(CFG,obs_size,action_size)
+
+        self.input_dim = self.CFG.latent_dim
+        self.mlp = mlp([self.input_dim] + self.CFG.decoder_hidden,self.CFG.decoder_activation)
+
+        input_dim = self.CFG.decoder_hidden[-1]
+        self.out_r = nn.Linear(input_dim, 1)
+        self.out_o = nn.Linear(input_dim, obs_size)
+        self.r_act = nn.Tanh()
+
+    def forward(self, latent):
+        x = self.mlp(latent)
+        r = self.out_r(x)
+        r = self.r_act(r)
+        o = self.out_o(x)
+        return r, o
+
 
 def main():
     CFG = decoder_CFG()
@@ -124,3 +80,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

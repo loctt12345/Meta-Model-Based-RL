@@ -47,44 +47,50 @@ class lstm_encoder(nn.Module):
         env = CFG.env(task = CFG.task)
         obs_dim = env.observation_space.shape[0]
         action_dim = env.action_space.shape[0]
-        reward_dim = 1
+        # reward_dim = 1
 
-        self.input_dim = self.CFG.obs_embed_dim 
+        self.input_dim = self.CFG.obs_embed_dim
         self.fc_obs = FeatureExtractor(obs_dim, self.CFG.obs_embed_dim, self.CFG.encoder_activation,self.CFG.device)
         if (self.CFG.use_action):
             self.fc_action = FeatureExtractor(action_dim, self.CFG.action_embed_dim, self.CFG.encoder_activation,self.CFG.device)
             self.input_dim += self.CFG.action_embed_dim
-        if (self.CFG.use_reward):
-            self.fc_reward = FeatureExtractor(reward_dim, self.CFG.reward_embed_dim, self.CFG.encoder_activation,self.CFG.device)
-            self.input_dim += self.CFG.reward_embed_dim
+        # if (self.CFG.use_reward):
+        #     self.fc_reward = FeatureExtractor(reward_dim, self.CFG.reward_embed_dim, self.CFG.encoder_activation,self.CFG.device)
+        #     self.input_dim += self.CFG.reward_embed_dim
 
         self.lstm = nn.LSTM(self.input_dim, self.CFG.lstm_hidden_dim, self.CFG.lstm_layers)
         self.fc_mu = nn.Linear(self.CFG.lstm_hidden_dim, self.CFG.latent_dim)
         self.fc_logvar = nn.Linear(self.CFG.lstm_hidden_dim, self.CFG.latent_dim)
 
-    
-    
+        # activation
+        self.out_mu = nn.Tanh()
+        self.out_logvar = nn.Tanh()
+
+
     def gaussian_sample(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
+        eps = torch.randn_like(std) * 0.5
         return eps.mul(std).add_(mu)
-    
-    def forward(self, obs, action, reward, old_hidden):
+
+    def forward(self, obs, action, old_hidden):
         obs = self.fc_obs(obs)
         input = obs
         if (self.CFG.use_action):
             action = self.fc_action(action)
             input = torch.cat((input, action), dim = 1)
-        
-        if (self.CFG.use_reward):
-            reward = self.fc_reward(reward)
-            input = torch.cat((input, reward), dim = 1)
+
+        # if (self.CFG.use_reward):
+        #     reward = self.fc_reward(reward)
+        #     input = torch.cat((input, reward), dim = 1)
 
         input = input.reshape(-1,input.shape[0],input.shape[1])
         out, hidden = self.lstm(input, old_hidden)
         out = out.reshape(-1, self.CFG.lstm_hidden_dim)
         mu = self.fc_mu(out)
         logvar = self.fc_logvar(out)
+
+        mu = self.out_mu(mu)
+        logvar = self.out_mu(logvar)
 
         return (mu,logvar,self.gaussian_sample(mu,logvar),hidden)
 
@@ -94,7 +100,7 @@ def main():
     print(logger_kwargs)
     CFG.print()
 
-    encoder = lstm_encoder(CFG) 
+    encoder = lstm_encoder(CFG)
     print(encoder)
     hidden = (torch.zeros([1, CFG.batch_size, CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([1, CFG.batch_size, CFG.lstm_hidden_dim], dtype=torch.float))
     for i in range(10):

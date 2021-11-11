@@ -18,8 +18,6 @@ from spinup.utils.mpi_pytorch import setup_pytorch_for_mpi, sync_params, mpi_avg
 from spinup.utils.mpi_tools import mpi_fork, mpi_avg, proc_id, mpi_statistics_scalar, num_procs
 
 
-
-
 class metaRL():
     def __init__(self, CFG, env = None, policy = None, encoder = None, decoder = None,
     logger_kwargs = None,use_latent = True):
@@ -32,23 +30,19 @@ class metaRL():
         self.use_latent = use_latent
 
         print(self.encoder)
-        print(self.decoder.reward_net)
-        print(self.decoder.state_net)
+        print(self.decoder)
         print(self.policy.ac.pi)
         print(self.policy.ac.v)
         # return
 
         TB_name = f'seed = {self.CFG.seed} ' +logger_kwargs['exp_name']
         os.makedirs('TB_logs', exist_ok = True)
-        dir = 'TB_logs\\'+str(TB_name)
+        dir = os.path.join('TB_logs', str(TB_name))
         self.writer = SummaryWriter(log_dir = dir)
 
         self.policy.assign_writer(self.writer)
 
-        # self.decoder_reward_optimizer   = Adam(self.decoder.reward_net.parameters(), lr=self.CFG.lr_reward_net)
-        # self.decoder_state_optimizer    = Adam(self.decoder.state_net.parameters() , lr=self.CFG.lr_state_net)
-        # self.encoder_optimizer          = Adam(self.encoder.parameters() , lr=self.CFG.lr_encoder)
-        self.VAE_optimizer = Adam([*self.encoder.parameters(), *self.decoder.reward_net.parameters(),*self.decoder.state_net.parameters()], lr=CFG.lr_VAE)
+        self.VAE_optimizer = Adam([*self.encoder.parameters(), *self.decoder.parameters()], lr=CFG.lr_VAE)
 
     def tensor(self,x):
         if isinstance(x, torch.Tensor):
@@ -61,6 +55,7 @@ class metaRL():
         # add the gaussian prior
         # https://arxiv.org/pdf/1811.09975.pdf
         # KL(N(mu,E)||N(m,S)) = 0.5 * (log(|S|/|E|) - K + tr(S^-1 E) + (m-mu)^T S^-1 (m-mu)))
+
         mu = latent_mean_new
         m = latent_mean
         logE = latent_logvar_new
@@ -68,11 +63,18 @@ class metaRL():
         kl_divergences = 0.5 * (torch.sum(logS, dim=-1) - torch.sum(logE, dim=-1) - gauss_dim + torch.sum(
             1 / torch.exp(logS) * torch.exp(logE), dim=-1) + ((m - mu) / torch.exp(logS) * (m - mu)).sum(dim=-1))
 
+        return kl_divergences.mean()
 
-        return kl_divergences
+    def minmaxscaler(self, x):
+        xmax = x.max()
+        xmin = x.min()
+        X_std = (x - xmin) / (xmax - xmin)
+        return X_std * 2 - 1
 
     def update_VAE(self, data,epoch_):
         obs,rew,act = data['obs'],data['rew'],data['act']
+
+        obs = self.minmaxscaler(obs)
         o_list = obs[:-1]
         next_o_list = obs[1:]
         r_list = rew[:-1].reshape(-1,1)
@@ -104,11 +106,9 @@ class metaRL():
                     next_o = next_o_list[start_idx+i]
                     a = a_list[start_idx+1]
 
-                # print("Ob", o)
-                # print("Ob shape", o.shape)
-                (mu_new,logvar_new,latent,hidden) = self.encoder(self.tensor(o),self.tensor(a),self.tensor(r),hidden)
+                (mu_new,logvar_new,latent,hidden) = self.encoder(self.tensor(o),self.tensor(a),hidden)
                 if (i):
-                    val = self.compute_kl_loss(mu,mu_new,logvar,logvar_new).mean()
+                    val = self.compute_kl_loss(mu,mu_new,logvar,logvar_new)
                     if (KL_loss):
                         KL_loss+= val
                     else:
@@ -116,69 +116,32 @@ class metaRL():
                 mu = mu_new
                 logvar = logvar_new
 
-                (r_mu,r_logvar,r_expect,r_std) = self.decoder.reward_net(self.tensor(o),self.tensor(a),self.tensor(next_o),latent)
-                (o_mu,o_logvar,o_expect,o_std) = self.decoder.state_net(self.tensor(o),self.tensor(a),latent)
+                r_expect, o_expect = self.decoder(latent)
 
                 ls_o_expect.append(o_expect.detach().numpy())
                 ls_o_next.append(next_o.detach().numpy())
 
-                ls_std_r.append(np.mean(r_std.detach().numpy()))
-                ls_std_o.append(np.mean(o_std.detach().numpy()))
                 if (loss_r):
-
                     loss_r += (r_expect - r).pow(2).mean()
                     loss_o += (o_expect - next_o).pow(2).mean()
-                    loss_std_r += - torch.log(r_std).mean()
-                    # loss_std_o += - torch.log(o_std).mean()
 
                 else:
                     loss_r = (r_expect - r      ).pow(2).mean()
                     loss_o = (o_expect - next_o ).pow(2).mean()
-                    loss_std_r = - torch.log(r_std).mean()
 
                 if (i >= self.CFG.construct_step):
                     pred_o = o_expect
                     pred_r = r_expect
 
             KL_loss_ls.append(KL_loss.detach().numpy())
-            # loss_std_o = None
-            # loss_latent_std = -torch.log(torch.exp(0.5 * logvar).mean())
-            # for i in range(self.CFG.construct_step + self.CFG.inference_step-1):
-            # for i in range(self.CFG.construct_step, self.CFG.construct_step + self.CFG.inference_step):
-            #     o,next_o,r,a = o_list[start_idx + i],next_o_list[start_idx + i],r_list[start_idx + i],a_list[start_idx + i]
-            #     (r_mu,r_logvar,r_expect,r_std) = self.decoder.reward_net(self.tensor(o),self.tensor(a),self.tensor(next_o),latent)
-            #     (o_mu,o_logvar,o_expect,o_std) = self.decoder.state_net(self.tensor(o),self.tensor(a),latent)
-
-            #     ls_o_expect.append(o_expect.detach().numpy())
-            #     ls_o_next.append(next_o.detach().numpy())
-
-            #     ls_std_r.append(np.mean(r_std.detach().numpy()))
-            #     ls_std_o.append(np.mean(o_std.detach().numpy()))
-            #     if (loss_r):
-
-            #         loss_r += (r_expect - r).pow(2).mean()
-            #         loss_o += (o_expect - next_o).pow(2).mean()
-            #         loss_std_r += - torch.log(r_std).mean()
-            #         # loss_std_o += - torch.log(o_std).mean()
-
-            #     else:
-            #         loss_r = (r_expect - r      ).pow(2).mean()
-            #         loss_o = (o_expect - next_o ).pow(2).mean()
-            #         loss_std_r = - torch.log(r_std).mean()
-            #         # loss_std_o = - torch.log(o_std).mean()
             loss = (
                 loss_r +
                 loss_o  +
-                # loss_std_o/5 +
-                loss_std_r/100 +
-                # loss_latent_std/200 +
                 KL_loss
             )
 
             ls_reward.append(loss_r.detach().numpy())
             ls_state.append(loss_o.detach().numpy())
-            ls_loss_std_r.append(loss_std_r.detach().numpy())
-            # ls_loss_std_o.append(loss_std_o.detach().numpy())
             ls_loss.append(loss.detach().numpy())
 
             loss.backward()
@@ -187,12 +150,7 @@ class metaRL():
         self.writer.add_scalar('VAE_loss/loss reward',np.mean(ls_reward),epoch_)
         self.writer.add_scalar('VAE_loss/loss latent KL',np.mean(KL_loss_ls),epoch_)
         self.writer.add_scalar('VAE_loss/loss state',np.mean(ls_state),epoch_)
-        self.writer.add_scalar('VAE_loss/loss std reward',np.mean(ls_loss_std_r),epoch_)
-        # self.writer.add_scalar('VAE_loss/loss std observation',np.mean(ls_loss_std_o),epoch_)
-        # self.writer.add_scalar('VAE_loss/loss latent std',loss_latent_std.detach().numpy(),epoch_)
         self.writer.add_scalar('VAE_loss/VAE loss',np.mean(ls_loss),epoch_)
-        self.writer.add_scalar('VAE_loss/std reward',np.mean(ls_std_r),epoch_)
-        self.writer.add_scalar('VAE_loss/std observation',np.mean((ls_std_o)),epoch_)
         self.writer.add_histogram('VAE_loss/observarion expect',np.asarray(ls_o_expect).reshape(-1),epoch_)
         self.writer.add_histogram('VAE_loss/observation true',np.asarray(ls_o_next).reshape(-1),epoch_)
 
@@ -216,6 +174,9 @@ class metaRL():
         v_l_old = v_l_old.item()
         ent_his = []
         # Train policy with multiple steps of gradient descent
+        # max_idx = len(data["obs"]) - self.CFG.batch_size - 1
+        # idx_list = np.arange(0, len(data["obs"])-1)
+
         for i in range(self.CFG.train_pi_iters):
             self.policy.pi_optimizer.zero_grad()
             loss_pi, pi_info = self.policy.compute_loss_pi(data)
@@ -234,7 +195,7 @@ class metaRL():
             self.writer.add_scalar('KL/KL divergence_max',max_kl,i)
             self.writer.add_scalar('KL/KL divergence_min',min_kl,i)
 
-            if kl > 1.5 * self.CFG.target_kl:
+            if kl > 2 * self.CFG.target_kl:
                 for j in range(i+1,self.CFG.train_pi_iters):
                     self.policy.KL_his[j].append(kl)
                     mean_kl = np.mean(self.policy.KL_his[j])
@@ -309,7 +270,7 @@ class metaRL():
 
                 # Update obs (critical!)
                 if (self.use_latent):
-                    (mu,logvar,new_latent,hidden) = self.encoder(self.tensor([o]),self.tensor(a),self.tensor([[r]]),hidden)
+                    (mu,logvar,new_latent,hidden) = self.encoder(self.tensor([o]),self.tensor(a),hidden)
                     latent_diff.append(np.sum((latent-new_latent).pow(2).detach().numpy()))
                     latent = new_latent
                     mu_ls = np.concatenate(((mu_ls,mu.detach().numpy().reshape(-1))))
@@ -418,11 +379,10 @@ class metaRL():
                 # r *= self.CFG.reward_scale
                 rewards.append(r)
                 if (self.use_latent):
-                    (mu,logvar,latent,hidden) = self.encoder(self.tensor([o]),self.tensor(a),self.tensor([[r]]),hidden)
+                    (mu,logvar,latent,hidden) = self.encoder(self.tensor([o]),self.tensor(a),hidden)
 
                 o = next_o
                 turn += 1
-                # print(turn)
                 if (turn == 1000):
                     done = True
                     print("reward", np.sum(rewards))
@@ -443,8 +403,9 @@ class metaRL():
         if (self.encoder):
             torch.save(self.encoder.state_dict(), osp.join(fpath,'encoder.pt'))
         if (self.decoder):
-            torch.save(self.decoder.reward_net.state_dict(), osp.join(fpath,'decoder_reward.pt'))
-            torch.save(self.decoder.state_net.state_dict(), osp.join(fpath,'decoder_state.pt'))
+            torch.save(self.decoder.state_dict(), osp.join(fpath,'decoder.pt'))
+        if (self.VAE_optimizer):
+            torch.save(self.VAE_optimizer.state_dict(), osp.join(fpath,'optimizer.pt'))
 
     def load_model(self,fpath):
         # self.policy.ac = torch.load(osp.join(fpath,'policy.pt'))
@@ -452,5 +413,5 @@ class metaRL():
         self.policy.ac.pi.load_state_dict(torch.load(osp.join(fpath,'actor.pt')))
         self.policy.ac.v.load_state_dict(torch.load(osp.join(fpath,'critic.pt')))
         self.encoder.load_state_dict(torch.load(osp.join(fpath,'encoder.pt')))
-        self.decoder.reward_net.load_state_dict(torch.load(osp.join(fpath,'decoder_reward.pt')))
-        self.decoder.state_net.load_state_dict(torch.load(osp.join(fpath,'decoder_state.pt')))
+        self.decoder.load_state_dict(torch.load(osp.join(fpath,'decoder.pt')))
+        self.VAE_optimizer.load_state_dict(torch.load(osp.join(fpath,'optimizer.pt')))

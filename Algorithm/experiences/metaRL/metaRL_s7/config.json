@@ -1,7 +1,7 @@
 {
     "CFG":	{
-        "<config.main_cfg.main_CFG object at 0x7fe319e61a00>":	{
-            "VAE_update_epoch":	100,
+        "<config.main_cfg.main_CFG object at 0x7fce41e61a00>":	{
+            "VAE_update_epoch":	50,
             "action_embed_dim":	10,
             "batch_size":	64,
             "clip_ratio":	0.2,
@@ -15,15 +15,15 @@
             "device":	"cpu",
             "encoder_activation":	"relu",
             "env":	"HalfCheetahHFieldEnv",
-            "epochs":	20,
+            "epochs":	40,
             "exp_name":	"metaRL",
             "gamma":	0.99,
             "hid":	64,
-            "inference_step":	10,
+            "inference_step":	20,
             "l":	2,
             "lam":	0.97,
             "latent_dim":	32,
-            "lr_VAE":	0.0001,
+            "lr_VAE":	0.001,
             "lstm_hidden_dim":	64,
             "lstm_layers":	3,
             "max_ep_len":	1000,
@@ -34,26 +34,27 @@
             "reward_embed_dim":	5,
             "reward_scale":	0.1,
             "save_freq":	10,
-            "seed":	5,
-            "steps_per_epoch":	10000,
+            "seed":	7,
+            "steps_per_epoch":	15000,
             "target_kl":	0.01,
             "task":	"None",
             "test_tasks":	[
-                "basin"
+                "basin",
+                "steep"
             ],
-            "train_pi_iters":	80,
+            "train_pi_iters":	50,
             "train_tasks":	[
                 "hfield",
                 "hill",
                 "gentle"
             ],
-            "train_v_iters":	80,
-            "trained_folder":	"./experiences/metaRL/metaRL_s5/pyt_save",
+            "train_v_iters":	50,
+            "trained_folder":	"./experiences/metaRL/metaRL_s7/pyt_save",
             "use_action":	true,
             "use_latent":	true,
             "use_pretrained":	true,
             "use_reward":	true,
-            "vf_lr":	0.0001
+            "vf_lr":	0.001
         }
     },
     "ac_kwargs":	{
@@ -63,24 +64,24 @@
         ]
     },
     "actor_critic":	"MLPActorCritic",
-    "env_fn":	"<function main.<locals>.<lambda> at 0x7fe328d829d0>",
+    "env_fn":	"<function main.<locals>.<lambda> at 0x7fce321c1040>",
     "exp_name":	"metaRL",
     "logger_kwargs":	{
         "exp_name":	"metaRL",
-        "output_dir":	"./experiences/metaRL/metaRL_s5"
+        "output_dir":	"./experiences/metaRL/metaRL_s7"
     },
     "self":	{
-        "<model.policy.PPO_spinup.PPO object at 0x7fe328d1c9a0>":	{
+        "<model.policy.PPO_spinup.PPO object at 0x7fce32173a90>":	{
             "logger":	{
-                "<spinup.utils.logx.EpochLogger object at 0x7fe328d1c970>":	{
+                "<spinup.utils.logx.EpochLogger object at 0x7fce321738e0>":	{
                     "epoch_dict":	{},
                     "exp_name":	"metaRL",
                     "first_row":	true,
                     "log_current_row":	{},
                     "log_headers":	[],
-                    "output_dir":	"./experiences/metaRL/metaRL_s5",
+                    "output_dir":	"./experiences/metaRL/metaRL_s7",
                     "output_file":	{
-                        "<_io.TextIOWrapper name='./experiences/metaRL/metaRL_s5/progress.txt' mode='w' encoding='UTF-8'>":	{
+                        "<_io.TextIOWrapper name='./experiences/metaRL/metaRL_s7/progress.txt' mode='w' encoding='UTF-8'>":	{
                             "mode":	"w"
                         }
                     }
