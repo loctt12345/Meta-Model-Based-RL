@@ -65,23 +65,21 @@ class metaRL():
 
         return kl_divergences.mean()
 
-    def minmaxscaler(self, x):
-        xmax = x.max()
-        xmin = x.min()
-        X_std = (x - xmin) / (xmax - xmin)
-        return X_std * 2 - 1
+    def normalize(self, x):
+        return torch.nn.functional.normalize(x, dim=-1)
 
     def update_VAE(self, data,epoch_):
         obs,rew,act = data['obs'],data['rew'],data['act']
 
-        obs = self.minmaxscaler(obs)
+        obs = self.normalize(obs)
+
         o_list = obs[:-1]
         next_o_list = obs[1:]
         r_list = rew[:-1].reshape(-1,1)
         a_list = act[:-1]
         length = o_list.shape[0]
         max_start = length - self.CFG.construct_step - self.CFG.inference_step
-        ls_reward,ls_state,ls_loss,ls_std_o,ls_std_r,ls_loss_std_r,ls_loss_std_o = [],[],[],[],[],[],[]
+        ls_reward,ls_state,ls_loss = [],[],[]
         KL_loss_ls = []
         ls_o_expect, ls_o_next = [],[]
 
@@ -253,9 +251,10 @@ class metaRL():
                 if (t% 50 == 0):
                     self.writer.add_histogram('histogram/VAE_latent',latent,t/50)
                 if (self.use_latent):
-                    input = torch.cat((self.tensor([o]),latent),dim = 1)
+                    # input = torch.cat((ob,latent.detach()),dim = 1)
+                    input = torch.cat((self.tensor([o]),latent.detach()),dim = 1)
                 else:
-                    input = self.tensor([o])
+                    input = ob
                 a, v, logp = self.policy.ac.step(input)
 
                 next_o, r, d, _ = self.env.step(a)
@@ -270,7 +269,18 @@ class metaRL():
 
                 # Update obs (critical!)
                 if (self.use_latent):
-                    (mu,logvar,new_latent,hidden) = self.encoder(self.tensor([o]),self.tensor(a),hidden)
+                    if isinstance(o, torch.Tensor):
+                        ob = torch.unsqueeze(o, 0)
+                    else:
+                        ob = torch.unsqueeze(torch.tensor(o, dtype=torch.float32), 0)
+                    ob = self.normalize(ob)
+                    (mu,logvar,new_latent,hidden) = self.encoder(ob,self.tensor(a),hidden)
+                    # predict 10 steps
+                    # temp_hidden = (torch.clone(hidden[0].detach()), torch.clone(hidden[1].detach()))
+                    # for _ in range(self.CFG.predict_steps):
+                    #     pred_r, pred_o = self.decoder(new_latent)
+                    #     _, _, new_latent, temp_hidden = self.encoder(pred_o,pred_r,temp_hidden)
+
                     latent_diff.append(np.sum((latent-new_latent).pow(2).detach().numpy()))
                     latent = new_latent
                     mu_ls = np.concatenate(((mu_ls,mu.detach().numpy().reshape(-1))))
@@ -286,10 +296,14 @@ class metaRL():
                         print('Warning: trajectory cut off by epoch at %d steps.'%ep_len, flush=True)
                     # if trajectory didn't reach terminal state, bootstrap value target
                     if timeout or epoch_ended:
-                        if (self.use_latent):
-                            input = torch.cat((self.tensor([o]),latent),dim = 1)
+                        if isinstance(o, torch.Tensor):
+                            ob = torch.unsqueeze(o, 0)
                         else:
-                            input = self.tensor([o])
+                            ob = torch.unsqueeze(torch.tensor(o, dtype=torch.float32), 0)
+                        if (self.use_latent):
+                            input = torch.cat((ob,latent),dim = 1)
+                        else:
+                            input = ob
                         _, v, _ = self.policy.ac.step(input)
                     else:
                         v = 0
@@ -370,8 +384,13 @@ class metaRL():
                     self.env.render()
                     # print(turn)
                     time.sleep(0.03)
+                # if isinstance(o, torch.Tensor):
+                #     ob = torch.unsqueeze(o, 0)
+                # else:
+                #     ob = torch.unsqueeze(torch.tensor(o, dtype=torch.float32), 0)
                 if (self.use_latent):
-                    input = torch.cat((self.tensor([o]),latent),dim = 1)
+                    # input = torch.cat((ob,latent.detach()),dim = 1)
+                    input = torch.cat((self.tensor([o]), latent.detach()),dim = 1)
                 else:
                     input = self.tensor([o])
                 a, v, logp = self.policy.ac.step(input)
@@ -379,9 +398,19 @@ class metaRL():
                 # r *= self.CFG.reward_scale
                 rewards.append(r)
                 if (self.use_latent):
-                    (mu,logvar,latent,hidden) = self.encoder(self.tensor([o]),self.tensor(a),hidden)
+                    if isinstance(o, torch.Tensor):
+                        ob = torch.unsqueeze(o, 0)
+                    else:
+                        ob = torch.unsqueeze(torch.tensor(o, dtype=torch.float32), 0)
+                    ob = self.normalize(ob)
+                    (mu,logvar,latent,hidden) = self.encoder(ob,self.tensor(a),hidden)
+                    # temp_hidden = (torch.clone(hidden[0].detach()), torch.clone(hidden[1].detach()))
+                    # for _ in range(self.CFG.predict_steps):
+                    #     pred_r, pred_o = self.decoder(latent)
+                    #     _, _, latent, temp_hidden = self.encoder(pred_o,self.tensor(pred_r),temp_hidden)
 
                 o = next_o
+
                 turn += 1
                 if (turn == 1000):
                     done = True

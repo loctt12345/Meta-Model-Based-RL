@@ -47,7 +47,7 @@ class lstm_encoder(nn.Module):
         env = CFG.env(task = CFG.task)
         obs_dim = env.observation_space.shape[0]
         action_dim = env.action_space.shape[0]
-        # reward_dim = 1
+        reward_dim = 1
 
         self.input_dim = self.CFG.obs_embed_dim
         self.fc_obs = FeatureExtractor(obs_dim, self.CFG.obs_embed_dim, self.CFG.encoder_activation,self.CFG.device)

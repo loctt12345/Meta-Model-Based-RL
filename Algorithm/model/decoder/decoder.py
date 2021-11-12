@@ -63,12 +63,14 @@ class Decoder(nn.Module):
         self.out_r = nn.Linear(input_dim, 1)
         self.out_o = nn.Linear(input_dim, obs_size)
         self.r_act = nn.Tanh()
+        self.o_act = nn.Tanh()
 
     def forward(self, latent):
         x = self.mlp(latent)
         r = self.out_r(x)
         r = self.r_act(r)
         o = self.out_o(x)
+        o = self.o_act(o)
         return r, o
 
 

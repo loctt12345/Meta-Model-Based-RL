@@ -76,14 +76,14 @@ class PPOBuffer:
         # the next two lines implement GAE-Lambda advantage calculation
         deltas = rews[:-1] + self.gamma * vals[1:] - vals[:-1]
         self.adv_buf[path_slice] = core.discount_cumsum(deltas, self.gamma * self.lam)
-        
+
         # calculate target value
         self.target_value_buf[path_slice] = rews[:-1] + self.gamma * vals[1:]
-        
+
 
         # the next line computes rewards-to-go, to be targets for the value function
         self.ret_buf[path_slice] = core.discount_cumsum(rews, self.gamma)[:-1]
-        
+
         self.path_start_idx = self.ptr
 
     def get(self):
@@ -248,7 +248,7 @@ class PPO():
             self.writer.add_scalar('KL/KL divergence_std',std_kl,i)
             self.writer.add_scalar('KL/KL divergence_max',max_kl,i)
             self.writer.add_scalar('KL/KL divergence_min',min_kl,i)
-            
+
             if kl > 1.5 * self.CFG.target_kl:
                 for j in range(i+1,self.CFG.train_pi_iters):
                     self.KL_his[j].append(kl)
@@ -268,7 +268,7 @@ class PPO():
             self.pi_optimizer.step()
         self.writer.add_scalar('entropy/relative policy entropy',np.mean(ent_his)/self.maximum_ent,epoch_)
         self.writer.add_scalar('entropy/policy entropy',np.mean(ent_his),epoch_)
-        
+
         self.logger.store(StopIter=i)
         value_residual_variance = []
         # Value function learning
@@ -287,7 +287,7 @@ class PPO():
                      KL=kl, Entropy=ent, ClipFrac=cf,
                      DeltaLossPi=(loss_pi.item() - pi_l_old),
                      DeltaLossV=(loss_v.item() - v_l_old))
-        
+
     def train(self):
         start_time = time.time()
         o, ep_ret, ep_len,rewards = self.env.reset(), 0, 0, []
@@ -306,7 +306,7 @@ class PPO():
                 # save and log
                 self.buf.store(o, a, r, v, logp)
                 self.logger.store(VVals=v)
-                
+
                 # Update obs (critical!)
                 o = next_o
 
@@ -336,9 +336,9 @@ class PPO():
                         self.writer.add_scalar('environment/reward_std',np.std(rewards),episode_cnt)
                         self.writer.add_scalar('environment/reward_max',np.max(rewards),episode_cnt)
                         self.writer.add_scalar('environment/reward_min',np.min(rewards),episode_cnt)
-                        
+
                         self.writer.add_scalar('environment/episode_length',ep_len,episode_cnt)
-                        
+
                         episode_cnt += 1
                     o, ep_ret, ep_len,rewards = self.env.reset(), 0, 0,[]
 
@@ -367,10 +367,10 @@ class PPO():
             self.logger.log_tabular('Time', time.time()-start_time)
             self.logger.dump_tabular()
         self.writer.close()
-    
+
     def load(self, path):
         self.ac = torch.load(path)
-    
+
     def test(self):
         for ttest in range(5):
             o, ep_ret, ep_len,rewards = self.env.reset(), 0, 0, []
@@ -379,7 +379,7 @@ class PPO():
             while( not done):
                 self.env.render()
                 import time
-                time.sleep(0.03) 
+                time.sleep(0.03)
                 a, v, logp = self.ac.step(torch.as_tensor(o, dtype=torch.float32))
                 next_o, r, done, _ = self.env.step(a)
                 rewards.append(r)

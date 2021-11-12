@@ -1,8 +1,8 @@
 {
     "CFG":	{
-        "<config.main_cfg.main_CFG object at 0x7fce41e61a00>":	{
+        "<config.main_cfg.main_CFG object at 0x7ff248661a00>":	{
             "VAE_update_epoch":	50,
-            "action_embed_dim":	10,
+            "action_embed_dim":	32,
             "batch_size":	64,
             "clip_ratio":	0.2,
             "construct_step":	80,
@@ -10,7 +10,7 @@
             "decoder_activation":	"ReLU",
             "decoder_hidden":	[
                 64,
-                64
+                128
             ],
             "device":	"cpu",
             "encoder_activation":	"relu",
@@ -28,28 +28,28 @@
             "lstm_layers":	3,
             "max_ep_len":	1000,
             "mode":	"test",
-            "obs_embed_dim":	10,
+            "obs_embed_dim":	32,
             "pi_lr":	0.0001,
+            "predict_steps":	5,
             "render":	true,
             "reward_embed_dim":	5,
             "reward_scale":	0.1,
             "save_freq":	10,
-            "seed":	7,
-            "steps_per_epoch":	15000,
+            "seed":	3,
+            "steps_per_epoch":	20000,
             "target_kl":	0.01,
             "task":	"None",
             "test_tasks":	[
-                "basin",
-                "steep"
+                "basin"
             ],
-            "train_pi_iters":	50,
+            "train_pi_iters":	80,
             "train_tasks":	[
                 "hfield",
                 "hill",
                 "gentle"
             ],
-            "train_v_iters":	50,
-            "trained_folder":	"./experiences/metaRL/metaRL_s7/pyt_save",
+            "train_v_iters":	80,
+            "trained_folder":	"./experiences/metaRL/metaRL_s3/pyt_save",
             "use_action":	true,
             "use_latent":	true,
             "use_pretrained":	true,
@@ -64,24 +64,24 @@
         ]
     },
     "actor_critic":	"MLPActorCritic",
-    "env_fn":	"<function main.<locals>.<lambda> at 0x7fce321c1040>",
+    "env_fn":	"<function main.<locals>.<lambda> at 0x7ff23acd90d0>",
     "exp_name":	"metaRL",
     "logger_kwargs":	{
         "exp_name":	"metaRL",
-        "output_dir":	"./experiences/metaRL/metaRL_s7"
+        "output_dir":	"./experiences/metaRL/metaRL_s3"
     },
     "self":	{
-        "<model.policy.PPO_spinup.PPO object at 0x7fce32173a90>":	{
+        "<model.policy.PPO_spinup.PPO object at 0x7ff23a4b4670>":	{
             "logger":	{
-                "<spinup.utils.logx.EpochLogger object at 0x7fce321738e0>":	{
+                "<spinup.utils.logx.EpochLogger object at 0x7ff23a4b45e0>":	{
                     "epoch_dict":	{},
                     "exp_name":	"metaRL",
                     "first_row":	true,
                     "log_current_row":	{},
                     "log_headers":	[],
-                    "output_dir":	"./experiences/metaRL/metaRL_s7",
+                    "output_dir":	"./experiences/metaRL/metaRL_s3",
                     "output_file":	{
-                        "<_io.TextIOWrapper name='./experiences/metaRL/metaRL_s7/progress.txt' mode='w' encoding='UTF-8'>":	{
+                        "<_io.TextIOWrapper name='./experiences/metaRL/metaRL_s3/progress.txt' mode='w' encoding='UTF-8'>":	{
                             "mode":	"w"
                         }
                     }
