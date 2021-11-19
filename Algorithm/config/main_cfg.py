@@ -12,26 +12,26 @@ class main_CFG :
         self.task = 'None'
         # training settings
         self.mode = 'test' # 'train' or 'test'
-        self.seed = 6
+        self.seed = 1
         self.cpu = 1
         self.exp_name = 'metaRL'     # name for save state dict
-        self.use_pretrained = False
-        self.trained_folder = '.\\experiences\\metaRL\\metaRL_s5\\pyt_save'
+        self.use_pretrained = True
+        self.trained_folder = '.\\experiences\\metaRL\\metaRL_s0\\pyt_save'
         self.render = True
         self.batch_size = 256         # batch size for train
-        self.VAE_update_epoch = 40
+        self.VAE_update_epoch = 20
         self.reward_scale = 1e-1
         self.use_latent = True
-        self.train_tasks = ['hfield', 'hill', 'gentle']
-        # self.test_tasks = ['gentle']
-        self.test_tasks = ['basin','steep']
+        # self.train_tasks = ['hfield', 'hill', 'gentle']
+        self.test_tasks = ['hfield']
+        # self.test_tasks = ['basin','steep']
 
 
         # Encoder config
 
         self.lstm_hidden_dim = 64   # hidden dim of lstm
         self.latent_dim = 32        # latent dim after encoder 
-        self.lstm_layers = 3        # number layer of lstm 3
+        self.lstm_layers = 2        # number layer of lstm 3
         self.obs_embed_dim = 10
         self.action_embed_dim = 10
         self.reward_embed_dim = 5
@@ -55,14 +55,14 @@ class main_CFG :
         # PPO config
         self.gamma = 0.99
         self.steps_per_epoch = 20000
-        self.epochs = 1000
+        self.epochs = 2000
         self.clip_ratio = 0.2
         self.pi_lr = 1e-5#3e-4
         self.vf_lr = 1e-5#1e-3
         self.train_pi_iters = 80
         self.train_v_iters = 80
         self.lam = 0.97
-        self.max_ep_len = 1000
+        self.max_ep_len = 500
         self.target_kl = 0.01
         self.save_freq = 10
 

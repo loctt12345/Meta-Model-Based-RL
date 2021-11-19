@@ -1,6 +1,6 @@
 import sys
 try:
-    sys.path.append("C:\\Users\\84915\\Desktop\\RL-Projects\\model\\varibad_for_game")
+    sys.path.append("C:\\Users\\84915\\Documents\\GitHub\\Meta-Model-Based-RL\\Algorithm")
 except:
     pass
 import numpy as np
