@@ -9,11 +9,11 @@ if sys.platform.startswith("darwin"):
 elif sys.platform.startswith("linux"):
     libfile = osp.join(osp.expanduser('~'), '.mujoco/mjpro131/bin/libmujoco131.so')
 elif sys.platform.startswith("win"):
-    libfile = osp.join(osp.expanduser('~'), '.mujoco/mjpro131/bin/mujoco131.dll')
+    libfile = osp.join(osp.expanduser('~'), '.mujoco/mjpro150/bin/mujoco150.lib')
 else:
     raise RuntimeError("unrecognized platform %s"%sys.platform)
 
-
+print(libfile)
 mjlib = cdll.LoadLibrary(libfile)
 
 

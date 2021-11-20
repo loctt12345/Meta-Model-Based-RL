@@ -9,7 +9,7 @@ import numpy as np
 import scipy.signal
 from gym.spaces import Box, Discrete
 from spinup.utils.run_utils import setup_logger_kwargs
-
+from config.main_cfg import main_CFG
 
 import numpy as np
 import torch
@@ -67,7 +67,7 @@ class lstm_encoder(nn.Module):
     def gaussian_sample(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
-        return eps.mul(std).add_(mu)
+        return eps.mul(std).add_(mu) ###???
     
     def forward(self, obs, action, reward, old_hidden):
         obs = self.fc_obs(obs)
@@ -81,6 +81,7 @@ class lstm_encoder(nn.Module):
             input = torch.cat((input, reward), dim = 1)
 
         input = input.reshape(-1,input.shape[0],input.shape[1])
+
         out, hidden = self.lstm(input, old_hidden)
         out = out.reshape(-1, self.CFG.lstm_hidden_dim)
         mu = self.fc_mu(out)
@@ -89,7 +90,7 @@ class lstm_encoder(nn.Module):
         return (mu,logvar,self.gaussian_sample(mu,logvar),hidden)
 
 def main():
-    CFG = lstm_encoder_CFG()
+    CFG = main_CFG()
     logger_kwargs = setup_logger_kwargs(CFG.exp_name, CFG.seed,'./experiences')
     print(logger_kwargs)
     CFG.print()
@@ -100,7 +101,7 @@ def main():
     for i in range(10):
         print()
         print(hidden[0])
-        (mu,logvar,latent,hidden) = encoder(torch.randn(CFG.batch_size,17),torch.randn(CFG.batch_size,6), torch.randn(CFG.batch_size,1), hidden)
+        (mu,logvar,latent,hidden) = encoder(torch.randn(CFG.batch_size,20),torch.randn(CFG.batch_size,6), torch.randn(CFG.batch_size,1), hidden)
         print(hidden[0].shape, hidden[1].shape)
         print((mu.shape,logvar.shape,latent.shape))
 

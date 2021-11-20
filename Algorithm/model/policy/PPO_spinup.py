@@ -137,7 +137,7 @@ class PPO():
             obs_size = self.env.observation_space.shape[0]
 
         # Create actor-critic module
-        self.ac = actor_critic(obs_size, self.env.action_space, **ac_kwargs)
+        self.ac = actor_critic(obs_size, self.env.action_space, **ac_kwargs).to(CFG.device)
         # Sync params across processes
         sync_params(self.ac)
         # Count variables
@@ -165,14 +165,14 @@ class PPO():
         return torch.as_tensor(x, dtype=torch.float32)
 
     def compute_loss_pi(self,data):
-        obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
+        obs, act, adv, logp_old = data['obs'], data['act'], data['adv'].detach().to(self.CFG.device), data['logp'].detach().to(self.CFG.device)
         if (self.use_latent):
             latent = data['latent']
-            input = torch.cat((self.tensor(obs),self.tensor(latent)),dim = 1)
+            input = torch.cat((self.tensor(obs).to(self.CFG.device),self.tensor(latent).to(self.CFG.device)),dim = 1).to(self.CFG.device)
         else:
-            input = obs
+            input = obs.to(self.CFG.device)
         # Policy loss
-        pi, logp = self.ac.pi(input, act)
+        pi, logp = self.ac.pi(input, act.to(self.CFG.device))
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1-self.CFG.clip_ratio, 1+self.CFG.clip_ratio) * adv
         loss_pi = -(torch.min(ratio * adv, clip_adv)).mean()
@@ -186,18 +186,18 @@ class PPO():
 
     # Set up function for computing value loss
     def compute_loss_v(self, data,log_ = False,epoch_ = None):
-        obs, ret = data['obs'], data['ret']
+        obs, ret = data['obs'], data['ret'].detach().to(self.CFG.device)
 
         if (self.use_latent):
             latent = data['latent']
-            input = torch.cat((self.tensor(obs),self.tensor(latent)),dim = 1)
+            input = torch.cat((self.tensor(obs),self.tensor(latent)),dim = 1).to(self.CFG.device)
         else:
-            input = obs
+            input = obs.to(self.CFG.device)
 
         target_value = data['target_value']
         value_function = self.ac.v(input)
-        variance1 = torch.var(target_value-value_function)
-        variance2 = torch.var(target_value)
+        variance1 = torch.var(target_value.detach().to(self.CFG.device)-value_function)
+        variance2 = torch.var(target_value.detach().to(self.CFG.device))
         v_info = dict(value_residual_variance = variance1/variance2)
         if (log_):
             val = data['val'].detach().numpy()

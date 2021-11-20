@@ -8,22 +8,22 @@ from envs import *
 class main_CFG :
     def __init__(self):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        print(f"----{self.device}----")
         self.env = HalfCheetahHFieldEnv#HalfCheetahBlocksEnv#HalfCheetahHFieldEnv
         self.task = 'None'
         # training settings
-        self.mode = 'test' # 'train' or 'test'
-        self.seed = 6
+        self.mode = 'train' # 'train' or 'test'
+        self.seed = 2
         self.cpu = 1
         self.exp_name = 'metaRL'     # name for save state dict
-        self.use_pretrained = False
-        self.trained_folder = '.\\experiences\\metaRL\\metaRL_s5\\pyt_save'
+        self.use_pretrained = True
+        self.trained_folder = './experiences/metaRL/metaRL_s1/pyt_save'
         self.render = True
         self.batch_size = 256         # batch size for train
         self.VAE_update_epoch = 40
         self.reward_scale = 1e-1
         self.use_latent = True
         self.train_tasks = ['hfield', 'hill', 'gentle']
-        # self.test_tasks = ['gentle']
         self.test_tasks = ['basin','steep']
 
 
@@ -42,8 +42,8 @@ class main_CFG :
 
         # decoder config
 
-        self.construct_step = 40 # use to construct latent
-        self.inference_step = 80 # use latent to predict next steps
+        self.construct_step = 80 # use to construct latent
+        self.inference_step = 10 # use latent to predict next steps
         self.decoder_hidden = [64,64]
         self.decoder_activation = nn.ReLU
 
@@ -73,7 +73,6 @@ class main_CFG :
         for item in attrs.items():
             print(item)
         print('--------------------------------------------------------------------')
-
 
 if __name__ == '__main__':
     CFG = main_CFG()

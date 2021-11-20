@@ -1,6 +1,7 @@
 import sys
 try:
-    sys.path.append("C:\\Users\\84915\\Desktop\\RL-Projects\\model\\varibad_for_game")
+    sys.path.remove('/home/huy/Desktop/stuff/spinningup')
+    sys.path.append("/home/huy/Desktop/github/RL-Projects/model/varibad_for_game")
 except:
     pass
 import numpy as np
@@ -34,12 +35,11 @@ def main():
     mpi_fork(CFG.cpu)  # run parallel code with mpi
 
     from spinup.utils.run_utils import setup_logger_kwargs
-    logger_kwargs = setup_logger_kwargs(CFG.exp_name, CFG.seed,'.\\experiences')
+    logger_kwargs = setup_logger_kwargs(CFG.exp_name, CFG.seed,'./experiences')
     print(logger_kwargs)
     env = CFG.env(task = CFG.task)
-    # print(env.task)
-    
-    encoder = lstm_encoder(CFG)
+
+    encoder = lstm_encoder(CFG).to(CFG.device)
     decoder = Decoder(CFG)
     policy = PPO(lambda : CFG.env(task = CFG.task), CFG, actor_critic=core.MLPActorCritic,
         ac_kwargs=dict(hidden_sizes=[CFG.hid]*CFG.l),logger_kwargs=logger_kwargs,use_latent=CFG.use_latent,
@@ -65,10 +65,6 @@ def main():
             print('test random policy')
         
         model.test()
-
-
-
-
 
 if __name__ == '__main__':
     main()

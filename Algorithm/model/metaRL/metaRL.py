@@ -38,9 +38,9 @@ class metaRL():
         print(self.policy.ac.v)
         # return
         
-        TB_name = f'seed = {self.CFG.seed} ' +logger_kwargs['exp_name']
+        TB_name = f'seed = {self.CFG.seed} ' +logger_kwargs['exp_name'] + '(' + str(time.ctime(time.time())) + ')'
         os.makedirs('TB_logs', exist_ok = True)
-        dir = 'TB_logs\\'+str(TB_name)
+        dir = 'TB_logs/'+str(TB_name)
         self.writer = SummaryWriter(log_dir = dir)
 
         self.policy.assign_writer(self.writer)
@@ -63,15 +63,13 @@ class metaRL():
         m = latent_mean
         logE = latent_logvar_new
         logS = latent_logvar
-        kl_divergences = 0.5 * (torch.sum(logS, dim=-1) - torch.sum(logE, dim=-1) - gauss_dim + torch.sum(
-            1 / torch.exp(logS) * torch.exp(logE), dim=-1) + ((m - mu) / torch.exp(logS) * (m - mu)).sum(dim=-1))
+        kl_divergences = 0.5 * (torch.sum(logS, dim=-1) - torch.sum(logE, dim=-1)
+                        - gauss_dim + torch.sum(1 / torch.exp(logS) * torch.exp(logE), dim=-1) + ((m - mu) / torch.exp(logS) * (m - mu)).sum(dim=-1))
 
 
         return kl_divergences
 
     def update_VAE(self, data,epoch_):
-
-
 
         obs,rew,act = data['obs'],data['rew'],data['act']
         o_list = obs[:-1]
@@ -89,10 +87,10 @@ class metaRL():
             self.VAE_optimizer.zero_grad()
             KL_loss = None
             start_idx = np.asarray([random.randint(0,max_start) for i in range(self.CFG.batch_size)])
-            hidden = (torch.zeros([self.CFG.lstm_layers, self.CFG.batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, self.CFG.batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float))
+            hidden = (torch.zeros([self.CFG.lstm_layers, self.CFG.batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float).to(self.CFG.device), torch.zeros([self.CFG.lstm_layers, self.CFG.batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float).to(self.CFG.device))
             for i in range(self.CFG.construct_step):
                 o,next_o,r,a = o_list[start_idx + i],next_o_list[start_idx + i],r_list[start_idx + i],a_list[start_idx + i]
-                (mu_new,logvar_new,latent,hidden) = self.encoder(self.tensor(o),self.tensor(a),self.tensor(r),hidden)
+                (mu_new,logvar_new,latent,hidden) = self.encoder(self.tensor(o).to(self.CFG.device),self.tensor(a).to(self.CFG.device),self.tensor(r).to(self.CFG.device),hidden)
                 if (i):
                     val = self.compute_kl_loss(mu,mu_new,logvar,logvar_new).mean()
                     if (KL_loss):
@@ -101,7 +99,7 @@ class metaRL():
                         KL_loss = val
                 mu = mu_new
                 logvar = logvar_new
-            KL_loss_ls.append(KL_loss.detach().numpy())
+            KL_loss_ls.append(KL_loss.detach().cpu().numpy())
             loss_r = None
             loss_o = None
             loss_std_r = None
@@ -109,40 +107,38 @@ class metaRL():
             # loss_latent_std = -torch.log(torch.exp(0.5 * logvar).mean())
             for i in range(self.CFG.construct_step + self.CFG.inference_step-1):
                 o,next_o,r,a = o_list[start_idx + i],next_o_list[start_idx + i],r_list[start_idx + i],a_list[start_idx + i]
-                (r_mu,r_logvar,r_expect,r_std) = self.decoder.reward_net(self.tensor(o),self.tensor(a),self.tensor(next_o),latent)
-                (o_mu,o_logvar,o_expect,o_std) = self.decoder.state_net(self.tensor(o),self.tensor(a),latent)
+                (r_mu,r_logvar,r_expect,r_std) = self.decoder.reward_net(self.tensor(o).to(self.CFG.device),self.tensor(a).to(self.CFG.device),self.tensor(next_o).to(self.CFG.device),latent)
+                (o_mu,o_logvar,o_expect,o_std) = self.decoder.state_net(self.tensor(o).to(self.CFG.device),self.tensor(a).to(self.CFG.device),latent)
                 
-                ls_o_expect.append(o_expect.detach().numpy())
+                ls_o_expect.append(o_expect.detach().cpu().numpy())
                 ls_o_next.append(next_o.detach().numpy())
 
-                ls_std_r.append(np.mean(r_std.detach().numpy()))
-                ls_std_o.append(np.mean(o_std.detach().numpy()))
+                ls_std_r.append(np.mean(r_std.detach().cpu().numpy()))
+                ls_std_o.append(np.mean(o_std.detach().cpu().numpy()))
                 if (loss_r):
 
-                    loss_r += (r_expect - r).pow(2).mean() 
-                    loss_o += (o_expect - next_o).pow(2).mean() 
+                    loss_r += (r_expect.detach().cpu()- r).pow(2).mean()
+                    loss_o += (o_expect .detach().cpu()- next_o).pow(2).mean()
                     loss_std_r += - torch.log(r_std).mean() 
                     # loss_std_o += - torch.log(o_std).mean()
 
                 else:
-                    loss_r = (r_expect - r      ).pow(2).mean()
-                    loss_o = (o_expect - next_o ).pow(2).mean()
+                    loss_r = (r_expect.detach().cpu() - r      ).pow(2).mean()
+                    loss_o = (o_expect.detach().cpu() - next_o ).pow(2).mean()
                     loss_std_r = - torch.log(r_std).mean()
                     # loss_std_o = - torch.log(o_std).mean()
-            loss = (
-                loss_r + 
-                loss_o  + 
+            loss = (loss_r + loss_o  +
                 # loss_std_o/5 + 
                 loss_std_r/100 +
                 # loss_latent_std/200 + 
                 KL_loss
             )
 
-            ls_reward.append(loss_r.detach().numpy())
-            ls_state.append(loss_o.detach().numpy())
-            ls_loss_std_r.append(loss_std_r.detach().numpy())
+            ls_reward.append(loss_r.detach().cpu().numpy())
+            ls_state.append(loss_o.detach().cpu().numpy())
+            ls_loss_std_r.append(loss_std_r.cpu().detach().numpy())
             # ls_loss_std_o.append(loss_std_o.detach().numpy())
-            ls_loss.append(loss.detach().numpy())
+            ls_loss.append(loss.detach().cpu().numpy())
 
             loss.backward()
 
@@ -165,7 +161,7 @@ class metaRL():
         if (self.use_latent):
             self.update_VAE(data,epoch_)
         # ---------------------------------train policy-----------------------------------
-        target_value = data['target_value'].detach().numpy()
+        target_value = data['target_value'].detach().cpu().numpy()
         self.writer.add_scalar('value function/target value mean',np.mean(target_value),epoch_)
         self.writer.add_scalar('value function/target value std',np.std(target_value),epoch_)
         self.writer.add_scalar('value function/target value max',np.max(target_value),epoch_)
@@ -223,7 +219,7 @@ class metaRL():
         for i in range(self.CFG.train_v_iters):
             self.policy.vf_optimizer.zero_grad()
             loss_v,v_info = self.policy.compute_loss_v(data)
-            value_residual_variance.append(v_info['value_residual_variance'].detach().numpy())
+            value_residual_variance.append(v_info['value_residual_variance'].detach().cpu().numpy())
             loss_v.backward()
             mpi_avg_grads(self.policy.ac.v)    # average grads across MPI processes
             self.policy.vf_optimizer.step()
@@ -247,17 +243,17 @@ class metaRL():
         episode_return = collections.deque(maxlen=100)
         # Main loop: collect experience in env and update/log each epoch
         for epoch in range(self.CFG.epochs):
-            hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
-            latent = torch.zeros(1,self.CFG.latent_dim)
+            hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float).to(self.CFG.device), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float).to(self.CFG.device))
+            latent = torch.zeros(1,self.CFG.latent_dim).to(self.CFG.device)
             mu_ls = np.asarray([])
             latent_diff = []
             for t in range(self.policy.local_steps_per_epoch):
                 if (t% 50 == 0):
                     self.writer.add_histogram('histogram/VAE_latent',latent,t/50)
                 if (self.use_latent):
-                    input = torch.cat((self.tensor([o]),latent),dim = 1)
+                    input = torch.cat((self.tensor([o]).to(self.CFG.device),latent.to(self.CFG.device)),dim = 1).to(self.CFG.device)
                 else:
-                    input = self.tensor([o])
+                    input = self.tensor([o]).to(self.CFG.device)
                 a, v, logp = self.policy.ac.step(input)
 
                 next_o, r, d, _ = self.env.step(a)
@@ -267,16 +263,16 @@ class metaRL():
                 ep_len += 1
 
                 # save and log
-                self.policy.buf.store(o, a, r, v, logp,latent.detach().numpy())
+                self.policy.buf.store(o, a, r, v, logp,latent.detach().cpu().numpy())
                 self.policy.logger.store(VVals=v)
                 
                 # Update obs (critical!)
                 if (self.use_latent):
-                    (mu,logvar,new_latent,hidden) = self.encoder(self.tensor([o]),self.tensor(a),self.tensor([[r]]),hidden)
-                    latent_diff.append(np.sum((latent-new_latent).pow(2).detach().numpy()))
+                    (mu,logvar,new_latent,hidden) = self.encoder(self.tensor([o]).to(self.CFG.device),self.tensor(a).to(self.CFG.device),self.tensor([[r]]).to(self.CFG.device),hidden)
+                    latent_diff.append(np.sum((latent-new_latent).pow(2).detach().cpu().numpy()))
                     latent = new_latent
-                    mu_ls = np.concatenate(((mu_ls,mu.detach().numpy().reshape(-1))))
-                    std_ls.append(np.mean(np.exp(0.5 * logvar.detach().numpy())))
+                    mu_ls = np.concatenate(((mu_ls,mu.detach().cpu().numpy().reshape(-1))))
+                    std_ls.append(np.mean(np.exp(0.5 * logvar.detach().cpu().numpy())))
                 o = next_o
 
                 timeout = ep_len == self.CFG.max_ep_len
@@ -289,9 +285,9 @@ class metaRL():
                     # if trajectory didn't reach terminal state, bootstrap value target
                     if timeout or epoch_ended:
                         if (self.use_latent):
-                            input = torch.cat((self.tensor([o]),latent),dim = 1)
+                            input = torch.cat((self.tensor([o]).to(self.CFG.device),latent),dim = 1).to(self.CFG.device)
                         else:
-                            input = self.tensor([o])
+                            input = self.tensor([o]).to(self.CFG.device)
                         _, v, _ = self.policy.ac.step(input)
                     else:
                         v = 0
@@ -322,8 +318,8 @@ class metaRL():
                         episode_cnt += 1
                     self.env.reset_task(task_ls = self.CFG.train_tasks)
                     if (self.use_latent):
-                        latent = torch.zeros(1,self.CFG.latent_dim)
-                        hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
+                        latent = torch.zeros(1,self.CFG.latent_dim).to(self.CFG.device)
+                        hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float).to(self.CFG.device), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float).to(self.CFG.device))
                         
                     o, ep_ret, ep_len,rewards = self.env.reset(), 0, 0,[]
                     std_ls = []
@@ -359,8 +355,8 @@ class metaRL():
 
     def test(self):
         for ttest in range(10):
-            hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
-            latent = torch.zeros(1,self.CFG.latent_dim)
+            hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float).to(self.CFG.device), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float).to(self.CFG.device))
+            latent = torch.zeros(1,self.CFG.latent_dim).to(self.CFG.device)
             self.env.reset_task(task_ls = self.CFG.test_tasks)
             o, ep_ret, ep_len,rewards = self.env.reset(), 0, 0, []
             done = False
@@ -372,16 +368,16 @@ class metaRL():
                     print(turn)
                     time.sleep(0.03) 
                 if (self.use_latent):
-                    input = torch.cat((self.tensor([o]),latent),dim = 1)
+                    input = torch.cat((self.tensor([o]).to(self.CFG.device),latent),dim = 1).to(self.CFG.device)
                 else:
-                    input = self.tensor([o])
+                    input = self.tensor([o]).to(self.CFG.device)
                 a, v, logp = self.policy.ac.step(input)
                 next_o, r, done, _ = self.env.step(a)
                 # r *= self.CFG.reward_scale
                 rewards.append(r)
                 if (self.use_latent):
-                    (mu,logvar,latent,hidden) = self.encoder(self.tensor([o]),self.tensor(a),self.tensor([[r]]),hidden)
-                
+                    (mu,logvar,latent,hidden) = self.encoder(self.tensor([o]).to(self.CFG.device),self.tensor(a).to(self.CFG.device),self.tensor([[r]]).to(self.CFG.device),hidden)
+
                 
                 o = next_o
                 turn += 1

@@ -13,14 +13,13 @@ import os
 
 
 class HalfCheetahHFieldEnv(MujocoEnv, Serializable):
-    def __init__(self, task='hfield', reset_every_episode=False, reward=True, *args, **kwargs):
+    def __init__(self, task='gentle', reset_every_episode=False, reward=True, *args, **kwargs):
         Serializable.quick_init(self, locals())
 
         self.cripple_mask = None
         self.reset_every_episode = reset_every_episode
         self.first = True
-        MujocoEnv.__init__(self, os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                                              "assets", "half_cheetah_hfield.xml"))
+        MujocoEnv.__init__(self, os.path.join(os.path.abspath(os.path.dirname(__file__)),"assets", "half_cheetah_hfield.xml"))
 
         task = None if task == 'None' else task
 
@@ -31,7 +30,6 @@ class HalfCheetahHFieldEnv(MujocoEnv, Serializable):
         self.dt = self.model.opt.timestep
 
         assert task in [None, 'hfield', 'hill', 'basin', 'steep', 'gentle']
-
         self.task = task
         self.x_walls = np.array([250, 260, 261, 270, 280, 285])
         self.height_walls = np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2])
