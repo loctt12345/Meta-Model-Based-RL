@@ -118,12 +118,10 @@ class metaRL():
                 ls_std_r.append(np.mean(r_std.detach().numpy()))
                 ls_std_o.append(np.mean(o_std.detach().numpy()))
                 if (loss_r):
-
                     loss_r += (r_expect - r).pow(2).mean() 
                     loss_o += (o_expect - next_o).pow(2).mean() 
                     loss_std_r += - torch.log(r_std).mean() 
                     loss_std_o += - torch.log(o_std).mean()
-
                 else:
                     loss_r = (r_expect - r      ).pow(2).mean()
                     loss_o = (o_expect - next_o ).pow(2).mean()
