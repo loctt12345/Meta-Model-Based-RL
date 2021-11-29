@@ -1,6 +1,6 @@
 import sys
 try:
-    sys.path.append("C:\\Users\\84915\\Desktop\\RL-Projects\\model\\varibad_for_game")
+    sys.path.append("C:\\Users\\84915\\Documents\\GitHub\\Meta-Model-Based-RL\\Algorithm")
 except:
     pass
 import numpy as np
@@ -47,6 +47,7 @@ def main():
     
     model = metaRL(CFG, env = env, policy = policy, encoder = encoder,
         decoder = decoder, logger_kwargs = logger_kwargs,use_latent = CFG.use_latent)
+
 
     # -------------------------train------------------------------------
     if (CFG.mode == 'train'):

@@ -8,31 +8,32 @@ from envs import *
 class main_CFG :
     def __init__(self):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        print(f'-------------{self.device}-------------------------')
         self.env = HalfCheetahHFieldEnv#HalfCheetahBlocksEnv#HalfCheetahHFieldEnv
         self.task = 'None'
         # training settings
         self.mode = 'test' # 'train' or 'test'
-        self.seed = 6
+        self.seed = 5
         self.cpu = 1
         self.exp_name = 'metaRL'     # name for save state dict
-        self.use_pretrained = False
-        self.trained_folder = '.\\experiences\\metaRL\\metaRL_s5\\pyt_save'
+        self.use_pretrained = True
+        self.trained_folder = '.\\experiences\\metaRL\\metaRL_s4\\pyt_save'
         self.render = True
         self.batch_size = 256         # batch size for train
-        self.VAE_update_epoch = 40
+        self.VAE_update_epoch = 20
         self.reward_scale = 1e-1
         self.use_latent = True
         self.train_tasks = ['hfield', 'hill', 'gentle']
-        # self.test_tasks = ['gentle']
-        self.test_tasks = ['basin','steep']
+        self.test_tasks = ['gentle']
+        # self.test_tasks = ['basin','steep']
 
 
         # Encoder config
 
         self.lstm_hidden_dim = 64   # hidden dim of lstm
-        self.latent_dim = 32        # latent dim after encoder 
-        self.lstm_layers = 3        # number layer of lstm 3
-        self.obs_embed_dim = 10
+        self.latent_dim = 64        # latent dim after encoder 
+        self.lstm_layers = 2        # number layer of lstm 3
+        self.obs_embed_dim = 15
         self.action_embed_dim = 10
         self.reward_embed_dim = 5
         self.encoder_activation = F.relu
