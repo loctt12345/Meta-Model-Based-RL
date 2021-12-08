@@ -1,6 +1,6 @@
 import sys
 try:
-    sys.path.append("C:\\Users\\84915\\Documents\\GitHub\\Meta-Model-Based-RL\\Algorithm")
+    sys.path.append('C:\\Users\\trnth\\Desktop\\ML\\Meta-RL\\Meta-Model-Based-RL\\Algorithm')
 except:
     pass
 import numpy as np
@@ -13,8 +13,10 @@ from config.main_cfg import main_CFG
 
 from model.policy.PPO_spinup import PPO
 from model.encoder.lstm_encoder import lstm_encoder
+from model.ensemble_encoder.lstm_ensemble import lstm_ensemble
 from model.decoder.decoder import Decoder
 from model.metaRL.metaRL import metaRL
+from model.metaRL.metaRL_ensemble import metaRL_ensemble
 import numpy as np
 import model.policy.PPO_spinup_core as core
 from spinup.utils.logx import EpochLogger
@@ -38,17 +40,15 @@ def main():
     print(logger_kwargs)
     env = CFG.env(task = CFG.task)
     # print(env.task)
-    
-    encoder = lstm_encoder(CFG)
+    #print(CFG.num_ensemble)
+    encoder = lstm_ensemble(CFG)
     decoder = Decoder(CFG)
     policy = PPO(lambda : CFG.env(task = CFG.task), CFG, actor_critic=core.MLPActorCritic,
         ac_kwargs=dict(hidden_sizes=[CFG.hid]*CFG.l),logger_kwargs=logger_kwargs,use_latent=CFG.use_latent,
         setup_writer = False)
     
-    model = metaRL(CFG, env = env, policy = policy, encoder = encoder,
+    model = metaRL_ensemble(CFG, env = env, policy = policy, encoder = encoder,
         decoder = decoder, logger_kwargs = logger_kwargs,use_latent = CFG.use_latent)
-
-
     # -------------------------train------------------------------------
     if (CFG.mode == 'train'):
         if (CFG.use_pretrained):
