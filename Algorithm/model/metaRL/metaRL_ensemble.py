@@ -11,6 +11,7 @@ import time
 import random
 import os.path as osp
 import math
+import random
 
 import model.policy.PPO_spinup_core as core
 from spinup.utils.logx import EpochLogger
@@ -119,10 +120,19 @@ class metaRL_ensemble():
             loss_r = None
             loss_o = None
             loss_std_r = None
+            loss_std_o = None
+            o_expect = None
             # loss_std_o = None
             # loss_latent_std = -torch.log(torch.exp(0.5 * logvar).mean())
             for i in range(self.CFG.construct_step + self.CFG.inference_step-1):
-                o,next_o,r,a = o_list[start_idx + i],next_o_list[start_idx + i],r_list[start_idx + i],a_list[start_idx + i]
+                o_his,next_o,r,a = o_list[start_idx + i],next_o_list[start_idx + i],r_list[start_idx + i],a_list[start_idx + i]
+                if (o_expect is None):
+                    o = o_his
+                else:
+                    if (random.randint(0,1)==1):
+                        o = o_expect
+                    else:
+                        o = o_his
                 (r_mu,r_logvar,r_expect,r_std) = self.decoder.reward_net(self.tensor(o),self.tensor(a),self.tensor(next_o),latent)
                 (o_mu,o_logvar,o_expect,o_std) = self.decoder.state_net(self.tensor(o),self.tensor(a),latent)
                 
@@ -142,11 +152,12 @@ class metaRL_ensemble():
                     loss_r = (r_expect - r      ).pow(2).mean()
                     loss_o = (o_expect - next_o ).pow(2).mean()
                     loss_std_r = - torch.log(r_std).mean()
+                    loss_std_o = - torch.log(o_std).mean()
                     # loss_std_o = - torch.log(o_std).mean()
             loss = (
                 loss_r + 
                 loss_o  + 
-                # loss_std_o/5 + 
+                loss_std_o/50 + 
                 loss_std_r/100 +
                 # loss_latent_std/200 + 
                 KL_loss
@@ -155,7 +166,7 @@ class metaRL_ensemble():
             ls_reward.append(loss_r.detach().numpy())
             ls_state.append(loss_o.detach().numpy())
             ls_loss_std_r.append(loss_std_r.detach().numpy())
-            # ls_loss_std_o.append(loss_std_o.detach().numpy())
+            ls_loss_std_o.append(loss_std_o.detach().numpy())
             ls_loss.append(loss.detach().numpy())
 
             loss.backward()
@@ -165,7 +176,7 @@ class metaRL_ensemble():
         self.writer.add_scalar('VAE_loss/loss latent KL',np.mean(KL_loss_ls),epoch_)
         self.writer.add_scalar('VAE_loss/loss state',np.mean(ls_state),epoch_)
         self.writer.add_scalar('VAE_loss/loss std reward',np.mean(ls_loss_std_r),epoch_)
-        # self.writer.add_scalar('VAE_loss/loss std observation',np.mean(ls_loss_std_o),epoch_)
+        self.writer.add_scalar('VAE_loss/loss std observation',np.mean(ls_loss_std_o),epoch_)
         # self.writer.add_scalar('VAE_loss/loss latent std',loss_latent_std.detach().numpy(),epoch_)
         self.writer.add_scalar('VAE_loss/VAE loss',np.mean(ls_loss),epoch_)
         self.writer.add_scalar('VAE_loss/std reward',np.mean(ls_std_r),epoch_)
