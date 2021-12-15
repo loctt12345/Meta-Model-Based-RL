@@ -252,12 +252,40 @@ class metaRL():
 
     def train(self):
         start_time = time.time()
-        self.env.reset_task(task_ls = self.CFG.train_tasks)
-        o, ep_ret, ep_len,rewards,std_ls = self.env.reset(), 0, 0, [],[]
+        # self.env.reset_task(task_ls = self.CFG.train_tasks)
+        # o, ep_ret, ep_len,rewards,std_ls = self.env.reset(), 0, 0, [],[]
         episode_cnt = 0
         episode_return = collections.deque(maxlen=100)
         # Main loop: collect experience in env and update/log each epoch
         for epoch in range(self.CFG.epochs):
+            self.env.reset_task(task_ls = self.CFG.train_tasks)
+            o, ep_ret, ep_len,rewards,std_ls = self.env.reset(), 0, 0, [],[]
+            hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
+            latent = torch.zeros(1,self.CFG.latent_dim)
+            #--------------------------------- test no latent -------------------------
+
+            for t in range(self.CFG.max_ep_len):
+                if (self.use_latent):
+                    input = torch.cat((self.tensor([o]),latent),dim = 1)
+                else:
+                    input = self.tensor([o])
+                a, v, logp = self.policy.ac.step(input)
+
+                next_o, r, d, _ = self.env.step(a)
+                r *= self.CFG.reward_scale
+                rewards.append(r)
+                ep_ret += r
+                ep_len += 1
+                o = next_o
+
+                timeout = ep_len == self.CFG.max_ep_len
+                terminal = d or timeout
+                if (terminal):
+                    self.writer.add_scalar('environment/ return dump latent',ep_ret,epoch)
+
+            #--------------------------------------------------------------------------
+            self.env.reset_task(task_ls = self.CFG.train_tasks)
+            o, ep_ret, ep_len,rewards,std_ls = self.env.reset(), 0, 0, [],[]
             hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
             latent = torch.zeros(1,self.CFG.latent_dim)
             mu_ls = np.asarray([])
@@ -397,7 +425,7 @@ class metaRL():
                 o = next_o
                 turn += 1
                 # print(turn)
-                if (turn == 1000):
+                if (turn == self.CFG.max_ep_len):
                     done = True
                     print(np.sum(rewards))
                     if (self.use_latent):

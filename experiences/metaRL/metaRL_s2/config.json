@@ -1,0 +1,93 @@
+{
+    "CFG":	{
+        "<config.main_cfg.main_CFG object at 0x00000262947A0B48>":	{
+            "VAE_update_epoch":	20,
+            "action_embed_dim":	10,
+            "batch_size":	256,
+            "clip_ratio":	0.2,
+            "construct_step":	40,
+            "cpu":	1,
+            "decoder_activation":	"ReLU",
+            "decoder_hidden":	[
+                64,
+                64
+            ],
+            "device":	"cuda:0",
+            "encoder_activation":	"relu",
+            "env":	"HalfCheetahHFieldEnv",
+            "epochs":	1000,
+            "exp_name":	"metaRL",
+            "gamma":	0.99,
+            "hid":	64,
+            "inference_step":	80,
+            "l":	2,
+            "lam":	0.97,
+            "latent_dim":	64,
+            "lr_VAE":	1e-05,
+            "lstm_hidden_dim":	64,
+            "lstm_layers":	2,
+            "max_ep_len":	500,
+            "mode":	"train",
+            "obs_embed_dim":	15,
+            "pi_lr":	1e-05,
+            "render":	true,
+            "reward_embed_dim":	5,
+            "reward_scale":	0.1,
+            "save_freq":	10,
+            "seed":	2,
+            "steps_per_epoch":	20000,
+            "target_kl":	0.01,
+            "task":	"None",
+            "test_tasks":	[
+                "gentle"
+            ],
+            "train_pi_iters":	80,
+            "train_tasks":	[
+                "hfield",
+                "hill",
+                "gentle"
+            ],
+            "train_v_iters":	80,
+            "trained_folder":	".\\experiences\\metaRL\\metaRL_s1\\pyt_save",
+            "use_action":	true,
+            "use_latent":	true,
+            "use_pretrained":	true,
+            "use_reward":	true,
+            "vf_lr":	1e-05
+        }
+    },
+    "ac_kwargs":	{
+        "hidden_sizes":	[
+            64,
+            64
+        ]
+    },
+    "actor_critic":	"MLPActorCritic",
+    "env_fn":	"<function main.<locals>.<lambda> at 0x00000262BCCD4708>",
+    "exp_name":	"metaRL",
+    "logger_kwargs":	{
+        "exp_name":	"metaRL",
+        "output_dir":	".\\experiences\\metaRL\\metaRL_s2"
+    },
+    "self":	{
+        "<model.policy.PPO_spinup.PPO object at 0x00000262BCDB9988>":	{
+            "logger":	{
+                "<spinup.utils.logx.EpochLogger object at 0x00000262BCDB9888>":	{
+                    "epoch_dict":	{},
+                    "exp_name":	"metaRL",
+                    "first_row":	true,
+                    "log_current_row":	{},
+                    "log_headers":	[],
+                    "output_dir":	".\\experiences\\metaRL\\metaRL_s2",
+                    "output_file":	{
+                        "<_io.TextIOWrapper name='.\\\\experiences\\\\metaRL\\\\metaRL_s2\\\\progress.txt' mode='w' encoding='cp1252'>":	{
+                            "mode":	"w"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "setup_writer":	false,
+    "use_latent":	true
+}

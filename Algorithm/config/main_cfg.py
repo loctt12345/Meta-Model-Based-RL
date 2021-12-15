@@ -12,12 +12,12 @@ class main_CFG :
         self.env = HalfCheetahHFieldEnv#HalfCheetahBlocksEnv#HalfCheetahHFieldEnv
         self.task = 'None'
         # training settings
-        self.mode = 'test' # 'train' or 'test'
-        self.seed = 5
+        self.mode = 'train' # 'train' or 'test'
+        self.seed = 8
         self.cpu = 1
         self.exp_name = 'metaRL'     # name for save state dict
         self.use_pretrained = True
-        self.trained_folder = '.\\experiences\\metaRL\\metaRL_s4\\pyt_save'
+        self.trained_folder = '.\\experiences\\metaRL\\metaRL_s7\\pyt_save'
         self.render = True
         self.batch_size = 256         # batch size for train
         self.VAE_update_epoch = 20
