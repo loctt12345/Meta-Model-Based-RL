@@ -91,6 +91,7 @@ class metaRL():
             KL_loss = None
             start_idx = np.asarray([random.randint(0,max_start) for i in range(self.CFG.batch_size)])
             hidden = (torch.zeros([self.CFG.lstm_layers, self.CFG.batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, self.CFG.batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float))
+            self.encoder.reset_saved_hidden(self.CFG.batch_size)
             for i in range(self.CFG.construct_step):
                 o,next_o,r,a = o_list[start_idx + i],next_o_list[start_idx + i],r_list[start_idx + i],a_list[start_idx + i]
                 (mu_new,logvar_new,latent,hidden) = self.encoder(self.tensor(o),self.tensor(a),self.tensor(r),hidden)
@@ -259,6 +260,7 @@ class metaRL():
         # Main loop: collect experience in env and update/log each epoch
         for epoch in range(self.CFG.epochs):
             hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
+            self.encoder.reset_saved_hidden(1)
             latent = torch.zeros(1,self.CFG.latent_dim)
             mu_ls = np.asarray([])
             latent_diff = []
@@ -366,11 +368,13 @@ class metaRL():
             self.policy.logger.log_tabular('StopIter', average_only=True)
             self.policy.logger.log_tabular('Time', time.time()-start_time)
             self.policy.logger.dump_tabular()
+            print(self.encoder.attention.f_hidden())
         self.writer.close()
 
     def test(self):
         for ttest in range(10):
             hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
+            self.encoder.reset_saved_hidden(1)
             latent = torch.zeros(1,self.CFG.latent_dim)
             self.env.reset_task(task_ls = self.CFG.test_tasks)
             o, ep_ret, ep_len,rewards = self.env.reset(), 0, 0, []
@@ -402,6 +406,7 @@ class metaRL():
                     print(np.sum(rewards))
                     if (self.use_latent):
                         latent = torch.zeros(1,self.CFG.latent_dim)
+                    print(self.encoder.attention.f_hidden())
             self.env.stop_viewer()
 
     def save_model(self):
