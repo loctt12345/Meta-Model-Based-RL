@@ -40,6 +40,8 @@ class main_CFG :
         self.use_action = True
         self.use_reward = True
         self.lr_VAE = 1e-5#1e-4
+        
+        self.n_saved_hidden = 10 #max number of saved_hidden
 
         # decoder config
 
