@@ -1,3 +1,4 @@
+from collections import deque
 import sys
 try:
     sys.path.remove('/home/huy/Desktop/stuff/spinningup')
@@ -40,6 +41,30 @@ class FeatureExtractor(nn.Module):
         else:
             return torch.zeros(0, ).to(self.device)
 
+class Attention(nn.Module):
+
+    def __init__(self, CFG, input_dim) -> None:
+        super(Attention, self).__init__()
+        self.CFG = CFG
+        self.attn = nn.MultiheadAttention(self.CFG.lstm_hidden_dim * 2, 1, kdim=self.CFG.lstm_hidden_dim * 2, vdim=self.CFG.lstm_hidden_dim * 2)
+        self.linear = nn.Linear(input_dim, self.CFG.lstm_hidden_dim * 2)
+
+    def forward(self, input, list_hiddens):
+        hiddens = []
+        for i in range(self.CFG.n_saved_hidden):
+            hidden = torch.cat([list_hiddens[i][0], list_hiddens[i][1]], dim=2)
+            hidden = hidden.view(1, hidden.shape[1] * 2, self.CFG.lstm_hidden_dim * 2).squeeze(0)
+            hiddens.append(hidden)
+        hiddens = torch.stack(hiddens)
+        input = torch.cat([input, input], dim=0).view(1, input.shape[1] * 2, -1)
+        input = self.linear(input)
+        output, _ = self.attn(input, hiddens, hiddens) 
+        output = output.view(2, output.shape[1] // 2, -1)
+        output = torch.split(output, self.CFG.lstm_hidden_dim, 2)
+        return output
+
+
+
 class lstm_encoder(nn.Module):
     def __init__(self,CFG):
         super(lstm_encoder, self).__init__()
@@ -61,9 +86,12 @@ class lstm_encoder(nn.Module):
         self.lstm = nn.LSTM(self.input_dim, self.CFG.lstm_hidden_dim, self.CFG.lstm_layers)
         self.fc_mu = nn.Linear(self.CFG.lstm_hidden_dim, self.CFG.latent_dim)
         self.fc_logvar = nn.Linear(self.CFG.lstm_hidden_dim, self.CFG.latent_dim)
+        self.attn = Attention(CFG, self.input_dim)
+        self.list_saved_hidden = deque([], maxlen=self.CFG.n_saved_hidden)
+    
+    def reset_list_saved_hidden(self):
+        self.list_saved_hidden.clear()
 
-    
-    
     def gaussian_sample(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
@@ -79,9 +107,14 @@ class lstm_encoder(nn.Module):
         if (self.CFG.use_reward):
             reward = self.fc_reward(reward)
             input = torch.cat((input, reward), dim = 1)
-
         input = input.reshape(-1,input.shape[0],input.shape[1])
+        #input shape = (1, 256, 30)
+
+        if len(self.list_saved_hidden) >= self.CFG.n_saved_hidden:
+            old_hidden = self.attn.forward(input, self.list_saved_hidden)
+
         out, hidden = self.lstm(input, old_hidden)
+        self.list_saved_hidden.append(hidden)
         out = out.reshape(-1, self.CFG.lstm_hidden_dim)
         mu = self.fc_mu(out)
         logvar = self.fc_logvar(out)
