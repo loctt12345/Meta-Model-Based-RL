@@ -12,7 +12,7 @@ class main_CFG :
         self.env = HalfCheetahHFieldEnv#HalfCheetahBlocksEnv#HalfCheetahHFieldEnv
         self.task = 'None'
         # training settings
-        self.mode = 'test' # 'train' or 'test'
+        self.mode = 'train' # 'train' or 'test'
         self.seed = 5
         self.cpu = 1
         self.exp_name = 'metaRL'     # name for save state dict
@@ -40,6 +40,7 @@ class main_CFG :
         self.use_action = True
         self.use_reward = True
         self.lr_VAE = 1e-5#1e-4
+        self.n_saved_hidden = 10
 
         # decoder config
 
