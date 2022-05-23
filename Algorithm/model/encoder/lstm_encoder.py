@@ -21,6 +21,7 @@ import time
 import torch
 import torch.nn as nn
 from config.lstm_encoder_cfg import lstm_encoder_CFG
+from memory_profiler import memory_usage
 
 class FeatureExtractor(nn.Module):
     """ Used for extrating features for states/actions/rewards """
@@ -46,22 +47,36 @@ class Attention(nn.Module):
     def __init__(self, CFG, input_dim) -> None:
         super(Attention, self).__init__()
         self.CFG = CFG
-        self.attn = nn.MultiheadAttention(self.CFG.lstm_hidden_dim * 2, 1, kdim=self.CFG.lstm_hidden_dim * 2, vdim=self.CFG.lstm_hidden_dim * 2)
-        self.linear = nn.Linear(input_dim, self.CFG.lstm_hidden_dim * 2)
+        self.attn_1 = nn.MultiheadAttention(self.CFG.lstm_hidden_dim, 1, kdim=self.CFG.lstm_hidden_dim, vdim=self.CFG.lstm_hidden_dim, dropout=0.8)
+        self.attn_2 = nn.MultiheadAttention(self.CFG.lstm_hidden_dim, 1, kdim=self.CFG.lstm_hidden_dim, vdim=self.CFG.lstm_hidden_dim, dropout=0.8)
+        self.linear = nn.Linear(input_dim, self.CFG.lstm_hidden_dim)
 
     def forward(self, input, list_hiddens):
-        hiddens = []
+        hiddens_0 = []
+        hiddens_1 = []
         for i in range(self.CFG.n_saved_hidden):
-            hidden = torch.cat([list_hiddens[i][0], list_hiddens[i][1]], dim=2)
-            hidden = hidden.view(1, hidden.shape[1] * 2, self.CFG.lstm_hidden_dim * 2).squeeze(0)
-            hiddens.append(hidden)
-        hiddens = torch.stack(hiddens)
-        input = torch.cat([input, input], dim=0).view(1, input.shape[1] * 2, -1)
+            hidden = list_hiddens[i]
+            hiddens_0.append(hidden[0].view(1, hidden[0].shape[1] * self.CFG.lstm_layers, self.CFG.lstm_hidden_dim).squeeze(0))
+            hiddens_1.append(hidden[1].view(1, hidden[1].shape[1] * self.CFG.lstm_layers, self.CFG.lstm_hidden_dim).squeeze(0))
+    
+        hiddens_0 = torch.stack(hiddens_0)
+        hiddens_1 = torch.stack(hiddens_1)
+        input = torch.cat([input, input], dim=1)
         input = self.linear(input)
-        output, _ = self.attn(input, hiddens, hiddens) 
-        output = output.view(2, output.shape[1] // 2, -1)
-        output = torch.split(output, self.CFG.lstm_hidden_dim, 2)
-        return output
+        output_0, _ = self.attn_1(input, hiddens_0, hiddens_0)
+        output_1, _ = self.attn_2(input, hiddens_1, hiddens_1)
+        output_0 = output_0.view(self.CFG.lstm_layers, output_0.shape[1] // 2, -1)
+        output_1 = output_1.view(self.CFG.lstm_layers, output_1.shape[1] // 2, -1)
+        """
+        if (output_0.isnan().any() or output_1.isnan().any()):
+            print("Hidden_0: ", hiddens_0)
+            print("Hidden_1: ", hiddens_1)
+            print("Output_1: ", output_1)
+            print("Output_0: ", output_0)
+            print("Input: ", input)
+            print("List hidden: ", list_hiddens)
+        """
+        return (output_0, output_1)
 
 
 
@@ -109,11 +124,13 @@ class lstm_encoder(nn.Module):
             input = torch.cat((input, reward), dim = 1)
         input = input.reshape(-1,input.shape[0],input.shape[1])
         #input shape = (1, 256, 30)
-
+    
         if len(self.list_saved_hidden) >= self.CFG.n_saved_hidden:
-            old_hidden = self.attn.forward(input, self.list_saved_hidden)
+            old_hidden_1 = self.attn.forward(input, self.list_saved_hidden)
+            old_hidden = old_hidden_1
 
         out, hidden = self.lstm(input, old_hidden)
+
         self.list_saved_hidden.append(hidden)
         out = out.reshape(-1, self.CFG.lstm_hidden_dim)
         mu = self.fc_mu(out)
