@@ -334,6 +334,7 @@ class metaRL():
                     if (self.use_latent):
                         latent = torch.zeros(1,self.CFG.latent_dim)
                         hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
+                        self.encoder.reset_list_saved_hidden()
                         
                     o, ep_ret, ep_len,rewards = self.env.reset(), 0, 0,[]
                     std_ls = []
