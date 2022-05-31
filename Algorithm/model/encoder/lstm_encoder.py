@@ -104,8 +104,11 @@ class lstm_encoder(nn.Module):
         self.attn = Attention(CFG, self.input_dim)
         self.list_saved_hidden = deque([], maxlen=self.CFG.n_saved_hidden)
     
-    def reset_list_saved_hidden(self):
+    def reset_list_saved_hidden(self, batch_size):
         self.list_saved_hidden.clear()
+        for i in range(self.CFG.n_saved_hidden):
+            hidden = (torch.zeros([self.CFG.lstm_layers, batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float))
+            self.list_saved_hidden.append(hidden)
 
     def gaussian_sample(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
