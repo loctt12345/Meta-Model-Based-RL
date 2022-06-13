@@ -41,6 +41,8 @@ class main_CFG :
         self.use_reward = True
         self.lr_VAE = 1e-5#1e-4
         self.n_saved_hidden = 10
+        self.attn_dropout = 0.1
+        self.n_head_attn = 5
 
         # decoder config
 
