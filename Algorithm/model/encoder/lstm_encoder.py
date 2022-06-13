@@ -122,8 +122,7 @@ class Attention(nn.Module):
     def __init__(self, CFG, input_dim) -> None:
         super(Attention, self).__init__()
         self.CFG = CFG
-        self.attn_1 = MultiHeadAttention(1, self.CFG.lstm_hidden_dim, d_k=self.CFG.lstm_hidden_dim, d_v=self.CFG.lstm_hidden_dim, dropout=0.8)
-        self.attn_2 = MultiHeadAttention(1, self.CFG.lstm_hidden_dim, d_k=self.CFG.lstm_hidden_dim, d_v=self.CFG.lstm_hidden_dim, dropout=0.8)
+        self.attn = MultiHeadAttention(self.CFG.n_head_attn, self.CFG.lstm_hidden_dim, d_k=self.CFG.lstm_hidden_dim, d_v=self.CFG.lstm_hidden_dim, dropout=self.CFG.attn_dropout)
         self.linear = nn.Linear(input_dim, self.CFG.lstm_hidden_dim)
 
     def forward(self, input, list_hiddens):
@@ -138,23 +137,10 @@ class Attention(nn.Module):
         hiddens_1 = torch.stack(hiddens_1)
         input = torch.cat([input, input], dim=1)
         input = self.linear(input)
-        output_0, _ = self.attn_1(input, hiddens_0, hiddens_0)
-        output_1, _ = self.attn_2(input, hiddens_1, hiddens_1)
+        output_0, _ = self.attn(input, hiddens_0, hiddens_0)
+        output_1, _ = self.attn(input, hiddens_1, hiddens_1)
         output_0 = output_0.view(self.CFG.lstm_layers, output_0.shape[1] // 2, -1)
         output_1 = output_1.view(self.CFG.lstm_layers, output_1.shape[1] // 2, -1)
-        
-        if (output_0.isnan().any() or output_1.isnan().any()):
-            f = open("/home/loc/Desktop/ML/Project/Meta-Model-Based-RL/Algorithm/sources/hiddens", "a")
-            f.write("-----------------------------Output_0----------------------------")
-            f.write(str(output_0))
-            f.write("----------------------------Output_1-----------------------------")
-            f.write(str(output_1))
-            f.write("---------------------------attn_1---------------------------------")
-            for params in self.attn_1.parameters():
-                f.write(str(params))
-            f.write("---------------------------attn_2---------------------------------")
-            for params in self.attn_2.parameters():
-                f.write(str(params))
         
         return (output_0, output_1)
 
