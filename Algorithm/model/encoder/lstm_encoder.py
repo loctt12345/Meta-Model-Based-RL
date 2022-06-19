@@ -170,12 +170,11 @@ class lstm_encoder(nn.Module):
 
         self.attn = Attention(CFG, self.input_dim)
         self.list_saved_hidden = deque([], maxlen=self.CFG.n_saved_hidden)
+        self.cnt = 0
     
     def reset_list_saved_hidden(self, batch_size):
         self.list_saved_hidden.clear()
-        for i in range(self.CFG.n_saved_hidden):
-            hidden = (torch.zeros([self.CFG.lstm_layers, batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float))
-            self.list_saved_hidden.append(hidden)
+        self.cnt = 0
 
     def gaussian_sample(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
@@ -194,18 +193,17 @@ class lstm_encoder(nn.Module):
             input = torch.cat((input, reward), dim = 1)
 
         input = input.reshape(-1,input.shape[0],input.shape[1])
-        #input shape = (1, 256, 30)
 
-        old_hidden = self.attn.forward(input, self.list_saved_hidden)
+        if (len(self.list_saved_hidden) == self.CFG.n_saved_hidden):
+            old_hidden = self.attn.forward(input, self.list_saved_hidden)
 
         out, hidden = self.lstm(input, old_hidden)
 
-        #f = open("/home/loc/Desktop/ML/Project/Meta-Model-Based-RL/Algorithm/sources/hiddens", "a")
-        #f.write(str(old_hidden[1][1]) + "\n")
-        #for params in self.lstm.parameters():
-        #   f.write(str(params))
+        self.cnt += 1
+        if (self.cnt == self.CFG.distance):
+            self.list_saved_hidden.append(hidden)
+            self.cnt = 0
 
-        self.list_saved_hidden.append(hidden)
         out = out.reshape(-1, self.CFG.lstm_hidden_dim)
         mu = self.fc_mu(out)
         logvar = self.fc_logvar(out)
