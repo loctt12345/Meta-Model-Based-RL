@@ -1,6 +1,7 @@
 import sys
 try:
-    sys.path.append("C:\\Users\\84915\\Documents\\GitHub\\Meta-Model-Based-RL\\Algorithm")
+    # sys.path.append("C:\\Users\\84915\\Documents\\GitHub\\Meta-Model-Based-RL\\Algorithm")
+    sys.path.append("/home/huy/Desktop/RL-research/Meta-Model-Based-RL/Algorithm")
 except:
     pass
 import numpy as np
@@ -34,12 +35,12 @@ def main():
     mpi_fork(CFG.cpu)  # run parallel code with mpi
 
     from spinup.utils.run_utils import setup_logger_kwargs
-    logger_kwargs = setup_logger_kwargs(CFG.exp_name, CFG.seed,'.\\experiences')
+    logger_kwargs = setup_logger_kwargs(CFG.exp_name, CFG.seed,'./experiences')
     print(logger_kwargs)
     env = CFG.env(task = CFG.task)
     # print(env.task)
     
-    encoder = lstm_encoder(CFG)
+    encoder = lstm_encoder(CFG).to(CFG.device)
     decoder = Decoder(CFG)
     policy = PPO(lambda : CFG.env(task = CFG.task), CFG, actor_critic=core.MLPActorCritic,
         ac_kwargs=dict(hidden_sizes=[CFG.hid]*CFG.l),logger_kwargs=logger_kwargs,use_latent=CFG.use_latent,

@@ -21,7 +21,7 @@ import time
 import torch
 import torch.nn as nn
 from config.lstm_encoder_cfg import lstm_encoder_CFG
-from memory_profiler import memory_usage
+# from memory_profiler import memory_usage
 
 class FeatureExtractor(nn.Module):
     """ Used for extrating features for states/actions/rewards"""
@@ -130,8 +130,8 @@ class Attention(nn.Module):
         hiddens_1 = []
         for i in range(self.CFG.n_saved_hidden):
             hidden = list_hiddens[i]
-            hiddens_0.append(hidden[0].view(1, hidden[0].shape[1] * self.CFG.lstm_layers, self.CFG.lstm_hidden_dim).squeeze(0))
-            hiddens_1.append(hidden[1].view(1, hidden[1].shape[1] * self.CFG.lstm_layers, self.CFG.lstm_hidden_dim).squeeze(0))
+            hiddens_0.append(hidden[0].view(1, hidden[0].shape[1] * self.CFG.lstm_layers, self.CFG.lstm_hidden_dim).squeeze(0).to(self.CFG.device))
+            hiddens_1.append(hidden[1].view(1, hidden[1].shape[1] * self.CFG.lstm_layers, self.CFG.lstm_hidden_dim).squeeze(0).to(self.CFG.device))
     
         hiddens_0 = torch.stack(hiddens_0)
         hiddens_1 = torch.stack(hiddens_1)
@@ -174,7 +174,7 @@ class lstm_encoder(nn.Module):
     def reset_list_saved_hidden(self, batch_size):
         self.list_saved_hidden.clear()
         for i in range(self.CFG.n_saved_hidden):
-            hidden = (torch.zeros([self.CFG.lstm_layers, batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float))
+            hidden = (torch.zeros([self.CFG.lstm_layers, batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float).to(self.CFG.device), torch.zeros([self.CFG.lstm_layers, batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float).to(self.CFG.device))
             self.list_saved_hidden.append(hidden)
 
     def gaussian_sample(self, mu, logvar):

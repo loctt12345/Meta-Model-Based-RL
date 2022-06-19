@@ -16,8 +16,8 @@ class main_CFG :
         self.seed = 5
         self.cpu = 1
         self.exp_name = 'metaRL'     # name for save state dict
-        self.use_pretrained = True
-        self.trained_folder = '.\\experiences\\metaRL\\metaRL_s4\\pyt_save'
+        self.use_pretrained = False
+        self.trained_folder = './experiences/metaRL/metaRL_s5/pyt_save'
         self.render = True
         self.batch_size = 256         # batch size for train
         self.VAE_update_epoch = 20
@@ -40,7 +40,7 @@ class main_CFG :
         self.use_action = True
         self.use_reward = True
         self.lr_VAE = 1e-5#1e-4
-        self.n_saved_hidden = 10
+        self.n_saved_hidden = 20
         self.attn_dropout = 0.1
         self.n_head_attn = 5
 

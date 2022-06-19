@@ -137,7 +137,7 @@ class PPO():
             obs_size = self.env.observation_space.shape[0]
 
         # Create actor-critic module
-        self.ac = actor_critic(obs_size, self.env.action_space, **ac_kwargs)
+        self.ac = actor_critic(obs_size, self.env.action_space, **ac_kwargs).to(CFG.device)
         # Sync params across processes
         sync_params(self.ac)
         # Count variables
@@ -162,13 +162,17 @@ class PPO():
         self.writer = writer
 
     def tensor(self,x):
-        return torch.as_tensor(x, dtype=torch.float32)
+        try:
+            tensor_ = torch.as_tensor(np.array(x), dtype=torch.float32).to(self.CFG.device)
+        except:
+            tensor_ = torch.as_tensor(x, dtype=torch.float32).to(self.CFG.device)
+        return tensor_
 
     def compute_loss_pi(self,data):
-        obs, act, adv, logp_old = data['obs'], data['act'], data['adv'], data['logp']
+        obs, act, adv, logp_old = self.tensor(data['obs']), self.tensor(data['act']), self.tensor(data['adv']), self.tensor(data['logp'])
         if (self.use_latent):
-            latent = data['latent']
-            input = torch.cat((self.tensor(obs),self.tensor(latent)),dim = 1)
+            latent = self.tensor(data['latent'])
+            input = torch.cat((obs,latent),dim = 1)
         else:
             input = obs
         # Policy loss
@@ -186,15 +190,15 @@ class PPO():
 
     # Set up function for computing value loss
     def compute_loss_v(self, data,log_ = False,epoch_ = None):
-        obs, ret = data['obs'], data['ret']
+        obs, ret = self.tensor(data['obs']), self.tensor(data['ret'])
 
         if (self.use_latent):
-            latent = data['latent']
-            input = torch.cat((self.tensor(obs),self.tensor(latent)),dim = 1)
+            latent = self.tensor(data['latent'])
+            input = torch.cat((obs,latent),dim = 1)
         else:
             input = obs
 
-        target_value = data['target_value']
+        target_value = self.tensor(data['target_value'])
         value_function = self.ac.v(input)
         variance1 = torch.var(target_value-value_function)
         variance2 = torch.var(target_value)

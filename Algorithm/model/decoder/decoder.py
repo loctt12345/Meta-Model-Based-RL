@@ -113,8 +113,8 @@ class Decoder():
         env = self.CFG.env(task = CFG.task)
         obs_size = env.observation_space.shape[0]
         action_size = env.action_space.shape[0]
-        self.reward_net = reward_network(CFG,obs_size,action_size)
-        self.state_net = state_network(CFG,obs_size,action_size)
+        self.reward_net = reward_network(CFG,obs_size,action_size).to(CFG.device)
+        self.state_net = state_network(CFG,obs_size,action_size).to(CFG.device)
 
 def main():
     CFG = decoder_CFG()
