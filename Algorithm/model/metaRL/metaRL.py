@@ -98,7 +98,7 @@ class metaRL():
             self.encoder.reset_list_saved_hidden(self.CFG.batch_size)
             for i in range(self.CFG.construct_step):
                 o,next_o,r,a = o_list[start_idx + i],next_o_list[start_idx + i],r_list[start_idx + i],a_list[start_idx + i]
-                (mu_new,logvar_new,latent,hidden) = self.encoder(self.tensor(o),self.tensor(a),self.tensor(r),hidden)
+                (mu_new,logvar_new,latent,hidden) = self.encoder(self.tensor(o),self.tensor(a),self.tensor(r),hidden, is_construct = True)
                 if (i):
                     val = self.compute_kl_loss(mu,mu_new,logvar,logvar_new).mean()
                     if (KL_loss):
@@ -387,10 +387,12 @@ class metaRL():
         self.writer.close()
 
     def test(self):
+        """
         self.encoder.valid()
         self.decoder.reward_net.valid()
         self.decoder.state_net.valid()
         self.policy.ac.valid()
+        """
         for ttest in range(10):
             hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
             self.encoder.reset_list_saved_hidden(1)
@@ -399,6 +401,7 @@ class metaRL():
             o, ep_ret, ep_len,rewards = self.env.reset(), 0, 0, []
             done = False
             turn = 0
+            cnt = 0 
             print(self.env.task)
             while( not done):
                 if (self.CFG.render):
