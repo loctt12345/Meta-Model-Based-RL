@@ -45,7 +45,7 @@ class Attention(nn.Module):
     def __init__(self, CFG):
         super(Attention, self).__init__()
         self.CFG = CFG
-        self.attn = nn.MultiheadAttention(self.CFG.lstm_hidden_dim, 4)
+        self.attn = nn.MultiheadAttention(self.CFG.lstm_hidden_dim, 8)
         
     def forward(self, current_output, list_output):
         q = current_output
