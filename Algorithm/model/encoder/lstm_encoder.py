@@ -20,6 +20,7 @@ import time
 import torch
 import torch.nn as nn
 from config.lstm_encoder_cfg import lstm_encoder_CFG
+from collections import deque
 
 class FeatureExtractor(nn.Module):
     """ Used for extrating features for states/actions/rewards """
@@ -39,6 +40,19 @@ class FeatureExtractor(nn.Module):
             return self.activation_function(self.fc(inputs))
         else:
             return torch.zeros(0, ).to(self.device)
+
+class Attention(nn.Module):
+    def __init__(self, CFG):
+        super(Attention, self).__init__()
+        self.CFG = CFG
+        self.attn = nn.MultiheadAttention(self.CFG.lstm_hidden_dim, 4)
+        
+    def forward(self, current_output, list_output):
+        q = current_output
+        k = torch.stack(list(list_output))
+        true_ouput, _ = self.attn(q, k, k)
+        return true_ouput
+
 
 class lstm_encoder(nn.Module):
     def __init__(self,CFG):
@@ -62,6 +76,8 @@ class lstm_encoder(nn.Module):
         self.fc_mu = nn.Linear(self.CFG.lstm_hidden_dim, self.CFG.latent_dim)
         self.fc_logvar = nn.Linear(self.CFG.lstm_hidden_dim, self.CFG.latent_dim)
 
+        self.list_output =  deque([], maxlen=self.CFG.n_saved_output)
+        self.attn = Attention(self.CFG)
     
     
     def gaussian_sample(self, mu, logvar):
@@ -69,6 +85,9 @@ class lstm_encoder(nn.Module):
         eps = torch.randn_like(std)
         return eps.mul(std).add_(mu)
     
+    def reset_list(self):
+        self.list_output.clear()
+
     def forward(self, obs, action, reward, old_hidden):
         obs = self.fc_obs(obs)
         input = obs
@@ -82,7 +101,15 @@ class lstm_encoder(nn.Module):
 
         input = input.reshape(-1,input.shape[0],input.shape[1])
         out, hidden = self.lstm(input, old_hidden)
+        
+        out_saved = out.reshape(-1, self.CFG.lstm_hidden_dim)
+        
+        if (len(self.list_output) >= self.CFG.n_saved_output):
+            out = self.attn.forward(out, self.list_output)
+            
         out = out.reshape(-1, self.CFG.lstm_hidden_dim)
+        self.list_output.append(out_saved)
+        
         mu = self.fc_mu(out)
         logvar = self.fc_logvar(out)
 
