@@ -31,7 +31,6 @@ class metaRL():
         self.decoder = decoder
         self.logger_kwargs = logger_kwargs
         self.use_latent = use_latent
-
         print(self.encoder)
         print(self.decoder.reward_net)
         print(self.decoder.state_net)
@@ -72,8 +71,6 @@ class metaRL():
 
     def update_VAE(self, data,epoch_):
 
-
-
         obs,rew,act = data['obs'],data['rew'],data['act']
         o_list = obs[:-1]
         next_o_list = obs[1:]
@@ -86,14 +83,13 @@ class metaRL():
         ls_o_expect, ls_o_next = [],[]
 
         for update_epoch in range(self.CFG.VAE_update_epoch):
-
             self.VAE_optimizer.zero_grad()
             KL_loss = None
             start_idx = np.asarray([random.randint(0,max_start) for i in range(self.CFG.batch_size)])
-            hidden = (torch.zeros([self.CFG.lstm_layers, self.CFG.batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, self.CFG.batch_size, self.CFG.lstm_hidden_dim], dtype=torch.float))
+            self.encoder.reset_ntm(self.CFG.batch_size)
             for i in range(self.CFG.construct_step):
                 o,next_o,r,a = o_list[start_idx + i],next_o_list[start_idx + i],r_list[start_idx + i],a_list[start_idx + i]
-                (mu_new,logvar_new,latent,hidden) = self.encoder(self.tensor(o),self.tensor(a),self.tensor(r),hidden)
+                (mu_new,logvar_new,latent) = self.encoder(self.tensor(o),self.tensor(a),self.tensor(r), is_train = True)
                 if (i):
                     val = self.compute_kl_loss(mu,mu_new,logvar,logvar_new).mean()
                     if (KL_loss):
@@ -257,9 +253,10 @@ class metaRL():
         episode_cnt = 0
         episode_return = collections.deque(maxlen=100)
         # Main loop: collect experience in env and update/log each epoch
+        
         for epoch in range(self.CFG.epochs):
-            hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
             latent = torch.zeros(1,self.CFG.latent_dim)
+            self.encoder.reset_ntm(1)
             mu_ls = np.asarray([])
             latent_diff = []
             for t in range(self.policy.local_steps_per_epoch):
@@ -283,7 +280,7 @@ class metaRL():
                 
                 # Update obs (critical!)
                 if (self.use_latent):
-                    (mu,logvar,new_latent,hidden) = self.encoder(self.tensor([o]),self.tensor(a),self.tensor([[r]]),hidden)
+                    (mu,logvar,new_latent) = self.encoder(self.tensor([o]),self.tensor(a),self.tensor([[r]]))
                     latent_diff.append(np.sum((latent-new_latent).pow(2).detach().numpy()))
                     latent = new_latent
                     mu_ls = np.concatenate(((mu_ls,mu.detach().numpy().reshape(-1))))
@@ -334,15 +331,12 @@ class metaRL():
                     self.env.reset_task(task_ls = self.CFG.train_tasks)
                     if (self.use_latent):
                         latent = torch.zeros(1,self.CFG.latent_dim)
-                        hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
-                        
+                        self.encoder.reset_ntm(1)
                     o, ep_ret, ep_len,rewards = self.env.reset(), 0, 0,[]
                     std_ls = []
                     mu_ls = np.asarray([])
 
             self.writer.add_scalar('VAE_latent_diff/L2 norm',np.mean(latent_diff),epoch)
-
-
             # Save model
             if (epoch % self.CFG.save_freq == 0) or (epoch == self.CFG.epochs-1):
                 self.save_model()
@@ -370,7 +364,6 @@ class metaRL():
 
     def test(self):
         for ttest in range(10):
-            hidden = (torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float), torch.zeros([self.CFG.lstm_layers, 1, self.CFG.lstm_hidden_dim], dtype=torch.float))
             latent = torch.zeros(1,self.CFG.latent_dim)
             self.env.reset_task(task_ls = self.CFG.test_tasks)
             o, ep_ret, ep_len,rewards = self.env.reset(), 0, 0, []
@@ -388,11 +381,9 @@ class metaRL():
                     input = self.tensor([o])
                 a, v, logp = self.policy.ac.step(input)
                 next_o, r, done, _ = self.env.step(a)
-                # r *= self.CFG.reward_scale
                 rewards.append(r)
                 if (self.use_latent):
-                    (mu,logvar,latent,hidden) = self.encoder(self.tensor([o]),self.tensor(a),self.tensor([[r]]),hidden)
-                
+                    (mu,logvar,latent) = self.encoder(self.tensor([o]),self.tensor(a),self.tensor([[r]]))
                 
                 o = next_o
                 turn += 1
