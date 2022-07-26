@@ -2,6 +2,7 @@ import sys
 try:
     sys.path.remove('/home/huy/Desktop/stuff/spinningup')
     sys.path.append("/home/huy/Desktop/github/RL-Projects/model/varibad_for_game")
+    sys.path.append("/home/loc/Desktop/ML/Meta-Model-Based-RL-NTM/Algorithm")
 except:
     pass
 
@@ -20,6 +21,7 @@ import time
 import torch
 import torch.nn as nn
 from config.lstm_encoder_cfg import lstm_encoder_CFG
+from model.encoder.NTM.aio import EncapsulatedNTM
 
 class FeatureExtractor(nn.Module):
     """ Used for extrating features for states/actions/rewards """
@@ -58,18 +60,20 @@ class lstm_encoder(nn.Module):
             self.fc_reward = FeatureExtractor(reward_dim, self.CFG.reward_embed_dim, self.CFG.encoder_activation,self.CFG.device)
             self.input_dim += self.CFG.reward_embed_dim
 
-        self.lstm = nn.LSTM(self.input_dim, self.CFG.lstm_hidden_dim, self.CFG.lstm_layers)
-        self.fc_mu = nn.Linear(self.CFG.lstm_hidden_dim, self.CFG.latent_dim)
-        self.fc_logvar = nn.Linear(self.CFG.lstm_hidden_dim, self.CFG.latent_dim)
+        #self.lstm = nn.LSTM(self.input_dim, self.CFG.lstm_hidden_dim, self.CFG.lstm_layers)
+        self.ntm = EncapsulatedNTM(self.input_dim, self.CFG.lstm_hidden_dim, self.CFG.lstm_hidden_dim, self.CFG.lstm_layers, 1, 10, 64)
+        self.fc_mu = nn.Linear(self.CFG.lstm_hidden_dim * 2, self.CFG.latent_dim)
+        self.fc_logvar = nn.Linear(self.CFG.lstm_hidden_dim * 2, self.CFG.latent_dim)
 
-    
+    def reset_ntm(self, batch_size): 
+        self.ntm.init_sequence(batch_size)
     
     def gaussian_sample(self, mu, logvar):
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return eps.mul(std).add_(mu)
     
-    def forward(self, obs, action, reward, old_hidden):
+    def forward(self, obs, action, reward, is_train = False):
         obs = self.fc_obs(obs)
         input = obs
         if (self.CFG.use_action):
@@ -80,13 +84,13 @@ class lstm_encoder(nn.Module):
             reward = self.fc_reward(reward)
             input = torch.cat((input, reward), dim = 1)
 
-        input = input.reshape(-1,input.shape[0],input.shape[1])
-        out, hidden = self.lstm(input, old_hidden)
-        out = out.reshape(-1, self.CFG.lstm_hidden_dim)
+        input = input.reshape(-1,input.shape[0],input.shape[1]).squeeze(0)
+        out, _ = self.ntm(input)
+        #out = out.reshape(-1, self.CFG.lstm_hidden_dim)
         mu = self.fc_mu(out)
         logvar = self.fc_logvar(out)
 
-        return (mu,logvar,self.gaussian_sample(mu,logvar),hidden)
+        return (mu,logvar,self.gaussian_sample(mu,logvar))
 
 def main():
     CFG = lstm_encoder_CFG()
