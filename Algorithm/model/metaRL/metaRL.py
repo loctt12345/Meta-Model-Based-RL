@@ -365,6 +365,7 @@ class metaRL():
     def test(self):
         for ttest in range(10):
             latent = torch.zeros(1,self.CFG.latent_dim)
+            self.encoder.reset_ntm(1)
             self.env.reset_task(task_ls = self.CFG.test_tasks)
             o, ep_ret, ep_len,rewards = self.env.reset(), 0, 0, []
             done = False
@@ -392,6 +393,7 @@ class metaRL():
                     done = True
                     print(np.sum(rewards))
                     if (self.use_latent):
+                        self.encoder.reset_ntm(1)
                         latent = torch.zeros(1,self.CFG.latent_dim)
             self.env.stop_viewer()
 
