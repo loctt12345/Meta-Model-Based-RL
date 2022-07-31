@@ -45,7 +45,7 @@ class Attention(nn.Module):
     def __init__(self, CFG):
         super(Attention, self).__init__()
         self.CFG = CFG
-        self.attn = nn.MultiheadAttention(self.CFG.lstm_hidden_dim, 8)
+        self.attn = nn.MultiheadAttention(self.CFG.lstm_hidden_dim, 4)
         
     def forward(self, current_output, list_output):
         q = current_output
@@ -75,6 +75,7 @@ class lstm_encoder(nn.Module):
         self.lstm = nn.LSTM(self.input_dim, self.CFG.lstm_hidden_dim, self.CFG.lstm_layers)
         self.fc_mu = nn.Linear(self.CFG.lstm_hidden_dim, self.CFG.latent_dim)
         self.fc_logvar = nn.Linear(self.CFG.lstm_hidden_dim, self.CFG.latent_dim)
+        self.combine = nn.Linear(self.CFG.lstm_hidden_dim * 2, self.CFG.lstm_hidden_dim)
 
         self.list_output =  deque([], maxlen=self.CFG.n_saved_output)
         self.attn = Attention(self.CFG)
@@ -100,16 +101,15 @@ class lstm_encoder(nn.Module):
             input = torch.cat((input, reward), dim = 1)
 
         input = input.reshape(-1,input.shape[0],input.shape[1])
-        out, hidden = self.lstm(input, old_hidden)
-        
+        out, hidden = self.lstm(input, old_hidden) 
         out_saved = out.reshape(-1, self.CFG.lstm_hidden_dim)
         
         if (len(self.list_output) >= self.CFG.n_saved_output):
             out = self.attn.forward(out, self.list_output)
-            
+        
         out = out.reshape(-1, self.CFG.lstm_hidden_dim)
         self.list_output.append(out_saved)
-        
+        out = self.combine(torch.cat([out_saved, out], dim = 1))
         mu = self.fc_mu(out)
         logvar = self.fc_logvar(out)
 
